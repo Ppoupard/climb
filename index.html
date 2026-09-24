@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="CLIMB — coach tryhard pour League of Legends : suivi de rang, sessions anti-tilt, stats, timers in-game, plan d'entraînement et playlists.">
+<title>CLIMB — Coach tryhard LoL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1020'/%3E%3Cpath d='M12 46 L32 14 L52 46 L42 46 L32 30 L22 46 Z' fill='%23c8aa6e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   CLIMB — tokens
+   ============================================================ */
+:root{
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Rajdhani", "Inter", system-ui, sans-serif;
+  --radius: 14px;
+  --radius-s: 9px;
+  --nav-h: 62px;
+  --gold: #c8aa6e;
+  --gold-2: #f0e6d2;
+  --gold-dim: rgba(200,170,110,.16);
+  --teal: #0ac8b9;
+  --teal-dim: rgba(10,200,185,.14);
+  --win: #22c55e;
+  --loss: #ef4444;
+  --warn: #f5b921;
+  --win-dim: rgba(34,197,94,.14);
+  --loss-dim: rgba(239,68,68,.14);
+  --warn-dim: rgba(245,185,33,.14);
+  /* chart marks (validated on the dark surface) */
+  --mark-1: #bd8a1c;
+  --mark-2: #0f9d90;
+  --mark-win: #1fab5b;
+  --mark-loss: #e8434f;
+  --grid: rgba(255,255,255,.07);
+  --axis: rgba(255,255,255,.18);
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg: #0b1020;
+  --bg-2: #0e1528;
+  --surface: #131a2c;
+  --surface-2: #1a2338;
+  --surface-3: #222d47;
+  --border: rgba(255,255,255,.08);
+  --border-2: rgba(255,255,255,.14);
+  --text: #f2f4f8;
+  --text-2: #b7bfd0;
+  --muted: #7f889c;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --hero-grad: radial-gradient(1200px 500px at 20% -10%, rgba(200,170,110,.18), transparent 60%), radial-gradient(800px 400px at 100% 0%, rgba(10,200,185,.12), transparent 60%);
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --bg: #f3f4f8;
+  --bg-2: #eceef4;
+  --surface: #ffffff;
+  --surface-2: #f2f3f7;
+  --surface-3: #e7e9f0;
+  --border: rgba(10,15,30,.10);
+  --border-2: rgba(10,15,30,.18);
+  --text: #10131c;
+  --text-2: #444b5c;
+  --muted: #737b8e;
+  --gold: #9a7b3c;
+  --gold-2: #6d5626;
+  --gold-dim: rgba(154,123,60,.14);
+  --teal: #0a8f85;
+  --teal-dim: rgba(10,143,133,.12);
+  --win: #158a3c;
+  --loss: #c62f3b;
+  --warn: #b7800a;
+  --mark-1: #b58a2a;
+  --mark-2: #0f9d90;
+  --mark-win: #1a9a52;
+  --mark-loss: #d03b3b;
+  --grid: rgba(10,15,30,.08);
+  --axis: rgba(10,15,30,.22);
+  --shadow: 0 10px 30px rgba(20,30,60,.10);
+  --hero-grad: radial-gradient(1200px 500px at 20% -10%, rgba(154,123,60,.14), transparent 60%), radial-gradient(800px 400px at 100% 0%, rgba(10,143,133,.10), transparent 60%);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font-ui);
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--teal)}
+h1,h2,h3,h4{font-family:var(--font-display);letter-spacing:.02em;margin:0;line-height:1.15}
+h2{font-size:1.5rem;text-transform:uppercase}
+h3{font-size:1.15rem;text-transform:uppercase;color:var(--gold-2)}
+h4{font-size:1rem;color:var(--text)}
+p{margin:.35rem 0}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.tiny{font-size:.75rem}
+.mono{font-variant-numeric:tabular-nums}
+.hidden{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- header ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+.topbar-inner{max-width:1120px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text)}
+.brand svg{width:34px;height:34px;flex:none}
+.brand-name{font-family:var(--font-display);font-weight:700;font-size:1.35rem;letter-spacing:.14em;text-transform:uppercase}
+.brand-tag{font-size:.7rem;white-space:nowrap;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;display:block;margin-top:-4px}
+.topnav{display:none;gap:2px;margin-left:auto}
+.topnav button{background:transparent;border:0;padding:8px 12px;border-radius:8px;color:var(--text-2);font-family:var(--font-display);font-weight:600;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.topnav button:hover{background:var(--surface-2);color:var(--text)}
+.topnav button.active{background:var(--gold-dim);color:var(--gold)}
+.rank-chip{margin-left:auto;display:flex;align-items:center;gap:8px;white-space:nowrap;flex:none;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:4px 10px 4px 4px;cursor:pointer}
+.rank-chip .emblem{width:28px;height:28px}
+.rank-chip b{font-family:var(--font-display);font-size:1rem;letter-spacing:.03em}
+.rank-chip span{font-size:.8rem;color:var(--muted)}
+@media(min-width:900px){
+  .topnav{display:flex}
+  .rank-chip{margin-left:8px}
+  .bottomnav{display:none!important}
+  body{padding-bottom:24px}
+}
+
+/* ---------- bottom nav (mobile) ---------- */
+.bottomnav{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;align-items:stretch;
+}
+.bottomnav button{flex:1;background:transparent;border:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:.62rem;min-width:0;letter-spacing:0;font-weight:600;letter-spacing:.03em;text-transform:uppercase;cursor:pointer;padding:6px 0}
+.bottomnav button svg{width:22px;height:22px}
+.bottomnav button.active{color:var(--gold)}
+
+/* ---------- layout ---------- */
+main{max-width:1120px;margin:0 auto;padding:18px 16px 40px}
+.view{display:none}
+.view.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.grid{display:grid;gap:14px}
+.grid-2{grid-template-columns:minmax(0,1fr)}
+.grid-3{grid-template-columns:minmax(0,1fr)}
+.grid-4{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:700px){.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-4{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1000px){.grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.span-2{grid-column:span 2}
+@media(max-width:699px){.span-2{grid-column:span 1}}
+.section-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:22px 0 10px;flex-wrap:wrap}
+.section-head p{margin:0}
+
+/* ---------- cards ---------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.card.tight{padding:12px}
+.card-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.card-title h3{font-size:1rem}
+.hero{
+  background:var(--surface);background-image:var(--hero-grad);
+  border:1px solid var(--border);border-radius:18px;padding:20px;
+  display:grid;grid-template-columns:auto minmax(0,1fr);gap:18px;align-items:center;position:relative;overflow:hidden
+}
+.hero .emblem{width:96px;height:96px}
+.hero-rank{font-family:var(--font-display);font-size:2rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;line-height:1}
+.hero-lp{font-size:1.05rem;color:var(--text-2);margin-top:2px}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:520px){.hero{grid-template-columns:1fr;text-align:center}.hero .emblem{margin:0 auto}.hero-actions{justify-content:center}}
+
+/* ---------- stat tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1000px){.tiles{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-s);padding:12px 14px;min-height:82px;display:flex;flex-direction:column;justify-content:space-between}
+.tile .label{font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tile .value{font-size:1.6rem;font-weight:600;line-height:1.1}
+.tile .delta{font-size:.75rem;color:var(--muted)}
+.tile .delta.up{color:var(--win)}
+.tile .delta.down{color:var(--loss)}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-2);background:var(--surface-2);color:var(--text);border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;transition:transform .08s ease, background .15s ease;text-decoration:none;font-size:.95rem;line-height:1.2}
+.btn:hover{background:var(--surface-3)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:#1a1405}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.teal{background:var(--teal);border-color:var(--teal);color:#04201e}
+.btn.danger{background:var(--loss-dim);border-color:transparent;color:var(--loss)}
+.btn.ghost{background:transparent}
+.btn.sm{padding:6px 10px;font-size:.85rem;border-radius:8px}
+.btn.xs{padding:4px 8px;font-size:.78rem;border-radius:7px}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn svg{width:18px;height:18px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- forms ---------- */
+label.field{display:block;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.input,select.input,textarea.input{width:100%;background:var(--bg-2);border:1px solid var(--border-2);border-radius:10px;padding:9px 11px;color:var(--text);outline:none}
+.input:focus{border-color:var(--gold)}
+textarea.input{resize:vertical;min-height:64px}
+.frow{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.frow-3{display:grid;gap:10px;grid-template-columns:repeat(3,minmax(0,1fr))}
+.frow-4{display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:520px){.frow-4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--border-2);background:var(--surface-2);border-radius:999px;padding:6px 12px;font-size:.85rem;cursor:pointer;color:var(--text-2);user-select:none;line-height:1.2}
+.chip:hover{background:var(--surface-3)}
+.chip.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.chip.win.on{background:var(--win-dim);border-color:var(--win);color:var(--win)}
+.chip.loss.on{background:var(--loss-dim);border-color:var(--loss);color:var(--loss)}
+.chip.teal.on{background:var(--teal-dim);border-color:var(--teal);color:var(--teal)}
+.chip .cicon{width:22px;height:22px;vertical-align:middle;margin:-5px 3px -5px -6px;border-width:1px}
+.scale{display:flex;gap:6px}
+.scale button{flex:1;border:1px solid var(--border-2);background:var(--surface-2);border-radius:10px;padding:10px 0;font-weight:700;cursor:pointer;color:var(--text-2)}
+.scale button.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold)}
+.check{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.check:last-child{border-bottom:0}
+.check input{width:18px;height:18px;accent-color:var(--gold);margin-top:2px;flex:none}
+.check.done span{color:var(--muted);text-decoration:line-through}
+
+/* ---------- champion picker ---------- */
+.champ-pick{position:relative}
+.champ-list{position:absolute;z-index:30;left:0;right:0;top:calc(100% + 4px);background:var(--surface-2);border:1px solid var(--border-2);border-radius:10px;max-height:260px;overflow:auto;box-shadow:var(--shadow)}
+.champ-list button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:8px 10px;cursor:pointer;color:var(--text)}
+.champ-list button:hover,.champ-list button.hl{background:var(--surface-3)}
+.cicon{width:36px;height:36px;border-radius:50%;object-fit:cover;background:var(--surface-3);border:2px solid var(--gold-dim);flex:none}
+.cicon.sm{width:28px;height:28px}
+.cicon.lg{width:56px;height:56px}
+.cicon.xl{width:72px;height:72px;border-color:var(--gold)}
+.champ-selected{display:flex;align-items:center;gap:10px;margin-top:8px}
+.recent-champs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.recent-champs img{cursor:pointer;transition:transform .1s}
+.recent-champs img:hover{transform:scale(1.08)}
+
+/* ---------- games list ---------- */
+.games{display:flex;flex-direction:column;gap:8px}
+.game{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px;border-left:4px solid var(--muted)}
+.game.W{border-left-color:var(--win)}
+.game.L{border-left-color:var(--loss)}
+.game .res{font-family:var(--font-display);font-weight:700;font-size:1.05rem;letter-spacing:.05em}
+.game.W .res{color:var(--win)}.game.L .res{color:var(--loss)}
+.game .meta{font-size:.82rem;color:var(--text-2)}
+.game .lp{font-weight:700;font-variant-numeric:tabular-nums}
+.game .lesson{font-size:.82rem;color:var(--muted);font-style:italic;margin-top:2px}
+.tag{display:inline-block;font-size:.7rem;padding:2px 7px;border-radius:999px;background:var(--surface-3);color:var(--text-2);margin-right:4px}
+
+/* ---------- charts ---------- */
+.chart{width:100%;height:auto;display:block}
+.chart text{font-family:var(--font-ui);font-size:11px;fill:var(--muted)}
+.chart .grid line{stroke:var(--grid);stroke-width:1}
+.chart .axis{stroke:var(--axis);stroke-width:1}
+.chart .line{fill:none;stroke:var(--mark-1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .area{fill:var(--mark-1);opacity:.10}
+.chart .dot{fill:var(--mark-1);stroke:var(--surface);stroke-width:2}
+.chart .bar{fill:var(--mark-1)}
+.chart .bar.teal{fill:var(--mark-2)}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .cross{stroke:var(--axis);stroke-width:1;stroke-dasharray:none}
+.tooltip{position:fixed;z-index:60;pointer-events:none;background:var(--surface-3);border:1px solid var(--border-2);border-radius:8px;padding:6px 9px;font-size:.8rem;box-shadow:var(--shadow);max-width:240px;display:none}
+.tooltip b{display:block}
+.hbars{display:flex;flex-direction:column;gap:8px}
+.hbar{display:grid;grid-template-columns:120px minmax(0,1fr) 74px;align-items:center;gap:10px;font-size:.85rem}
+.hbar .val{white-space:nowrap}
+.hbar .name{display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.hbar .track{height:14px;background:var(--surface-3);border-radius:0 4px 4px 0;overflow:hidden;position:relative}
+.hbar .fill{height:100%;background:var(--mark-1);border-radius:0 4px 4px 0}
+.hbar .fill.win{background:var(--mark-win)}
+.hbar .fill.loss{background:var(--mark-loss)}
+.hbar .fill.teal{background:var(--mark-2)}
+.hbar .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-2)}
+@media(max-width:520px){.hbar{grid-template-columns:96px minmax(0,1fr) 64px;font-size:.8rem}}
+.cicon.ph{display:inline-grid;place-items:center;font-weight:700;font-size:.62rem;letter-spacing:.02em;color:var(--gold);position:relative;overflow:hidden;text-transform:uppercase}
+.cicon.ph:before{content:attr(data-ini)}
+.cicon.ph img{position:absolute;inset:0;width:100%;height:100%;border-radius:50%;object-fit:cover}
+.cicon.ph.lg{font-size:.9rem}.cicon.ph.sm{font-size:.5rem}
+.progress{height:10px;background:var(--surface-3);border-radius:999px;overflow:hidden}
+.progress > div{height:100%;background:linear-gradient(90deg,var(--gold),var(--teal));border-radius:999px;transition:width .4s ease}
+
+/* ---------- insights ---------- */
+.insight{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border)}
+.insight .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;background:var(--gold-dim);color:var(--gold)}
+.insight .ico svg{width:18px;height:18px}
+.insight.warn .ico{background:var(--warn-dim);color:var(--warn)}
+.insight.good .ico{background:var(--win-dim);color:var(--win)}
+.insight.bad .ico{background:var(--loss-dim);color:var(--loss)}
+.insight b{display:block;font-size:.95rem}
+.insight p{margin:2px 0 0;font-size:.85rem;color:var(--text-2)}
+
+/* ---------- session ---------- */
+.session-banner{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:linear-gradient(90deg,var(--gold-dim),transparent);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px}
+.session-banner .goal{font-family:var(--font-display);font-size:1.15rem;font-weight:700;letter-spacing:.03em}
+.wl-dots{display:flex;gap:4px}
+.wl-dots span{width:14px;height:14px;border-radius:4px;background:var(--surface-3);display:grid;place-items:center;font-size:.6rem;font-weight:800;color:#fff}
+.wl-dots span.W{background:var(--win)}
+.wl-dots span.L{background:var(--loss)}
+.wl-dots span.R{background:var(--muted)}
+
+/* ---------- timers ---------- */
+.gameclock{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.gameclock .time{font-family:var(--font-display);font-size:2.6rem;font-weight:700;letter-spacing:.06em;font-variant-numeric:tabular-nums;line-height:1}
+.spell-rows{display:flex;flex-direction:column;gap:8px}
+.spell-row{display:grid;grid-template-columns:78px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+.spell-row .lane{font-family:var(--font-display);font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:.95rem;line-height:1.1}
+@media(max-width:420px){.spell-row{grid-template-columns:repeat(2,minmax(0,1fr));padding:8px}.spell-row .lane{grid-column:1 / -1;display:flex;gap:8px;align-items:baseline}.spell-row .lane small{display:inline}}
+.spell-row .lane small{display:block;font-size:.65rem;color:var(--muted);letter-spacing:.04em}
+.spellbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--border-2);background:var(--surface);border-radius:10px;padding:8px 10px;cursor:pointer;min-height:48px;font-weight:600;text-align:left}
+.spellbtn .cd{font-family:var(--font-display);font-size:1.3rem;font-variant-numeric:tabular-nums;font-weight:700}
+.spellbtn.running{border-color:var(--loss);background:var(--loss-dim)}
+.spellbtn.soon{border-color:var(--warn);background:var(--warn-dim)}
+.spellbtn.ready{border-color:var(--win);background:var(--win-dim)}
+.scell{display:flex;flex-direction:column;gap:3px;min-width:0}
+.s2sel{background:var(--bg-2);border:1px solid var(--border);border-radius:6px;font-size:.72rem;padding:2px 4px;color:var(--text-2);width:max-content;max-width:100%;height:22px}
+.s2lbl{font-size:.72rem;color:var(--muted);height:22px;line-height:22px;padding-left:4px}
+.spellbtn small{font-size:.7rem;color:var(--muted);display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spellbtn .icon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-size:.7rem;font-weight:800;flex:none;background:var(--surface-3);color:var(--text-2)}
+.spellbtn .icon.F{background:#f0c33b;color:#2b1f00}
+.objs{display:flex;flex-direction:column;gap:8px}
+.obj{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+.obj .oi{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--surface-3)}
+.obj .oi svg{width:22px;height:22px}
+.obj .on{font-weight:700}
+.obj .os{font-size:.8rem;color:var(--muted)}
+.obj .oc{font-family:var(--font-display);font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.obj.soon{border-color:var(--warn)}
+.obj.up{border-color:var(--win)}
+.obj.up .oc{color:var(--win)}
+.obj.gone{opacity:.5}
+.kbd{display:inline-block;border:1px solid var(--border-2);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:.72rem;font-family:var(--font-ui);background:var(--surface-2);color:var(--text-2)}
+
+/* ---------- tables / cheat sheets ---------- */
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.timeline{display:flex;flex-direction:column;gap:0;position:relative;padding-left:18px}
+.timeline:before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border-2)}
+.tl{position:relative;padding:6px 0 6px 8px}
+.tl:before{content:"";position:absolute;left:-17px;top:12px;width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.tl b{font-family:var(--font-display);font-size:1.05rem;letter-spacing:.03em;color:var(--gold-2);margin-right:8px}
+.tl span{color:var(--text-2);font-size:.9rem}
+.rules li{margin:6px 0}
+ul.clean{padding-left:18px;margin:6px 0}
+ul.clean li{margin:5px 0;color:var(--text-2)}
+ul.clean li b{color:var(--text)}
+details{border:1px solid var(--border);border-radius:12px;background:var(--surface-2);padding:0}
+details summary{cursor:pointer;padding:12px 14px;font-weight:600;list-style:none;display:flex;align-items:center;justify-content:space-between}
+details summary::-webkit-details-marker{display:none}
+details summary:after{content:"+";color:var(--muted);font-weight:700;font-size:1.1rem}
+details[open] summary:after{content:"–"}
+details .body{padding:0 14px 14px;color:var(--text-2);font-size:.92rem}
+details + details{margin-top:8px}
+
+/* ---------- playlists ---------- */
+.pl{display:flex;flex-direction:column;gap:10px}
+.pl-head{display:flex;gap:12px;align-items:center}
+.pl-cover{width:56px;height:56px;border-radius:12px;flex:none;display:grid;place-items:center;font-family:var(--font-display);font-weight:700;font-size:1.3rem;color:#fff;letter-spacing:.04em}
+.pl-tracks{display:flex;flex-direction:column;gap:4px}
+.track{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:var(--surface-2);font-size:.88rem}
+.track .n{color:var(--muted);width:20px;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.track .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track .t small{color:var(--muted)}
+.track a{color:var(--muted);display:grid;place-items:center;width:28px;height:28px;border-radius:6px;flex:none}
+.track a:hover{background:var(--surface-3);color:var(--text)}
+.track a svg{width:16px;height:16px}
+
+/* ---------- breathing modal ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(3,6,14,.72);z-index:80;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border-2);border-radius:18px;padding:22px;max-width:520px;width:100%;box-shadow:var(--shadow);max-height:92vh;overflow:auto}
+.breath{width:180px;height:180px;margin:14px auto;border-radius:50%;display:grid;place-items:center;position:relative}
+.breath .ring{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle, var(--teal-dim), transparent 70%);border:2px solid var(--teal);transform:scale(.6);transition:transform 4s ease-in-out}
+.breath .ring.in{transform:scale(1)}
+.breath .ring.hold{transition-duration:.2s}
+.breath .txt{position:relative;font-family:var(--font-display);font-size:1.4rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- misc ---------- */
+.emblem{display:block}
+.toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + 18px);transform:translateX(-50%);background:var(--surface-3);border:1px solid var(--border-2);color:var(--text);padding:10px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:90;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+@media(min-width:900px){.toast{bottom:24px}}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--surface-3);color:var(--text-2);letter-spacing:.03em;text-transform:uppercase}
+.badge.gold{background:var(--gold-dim);color:var(--gold)}
+.badge.teal{background:var(--teal-dim);color:var(--teal)}
+.badge.win{background:var(--win-dim);color:var(--win)}
+.badge.loss{background:var(--loss-dim);color:var(--loss)}
+.badge.warn{background:var(--warn-dim);color:var(--warn)}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.empty{text-align:center;color:var(--muted);padding:26px 10px;font-size:.92rem}
+.empty b{display:block;color:var(--text);font-family:var(--font-display);font-size:1.1rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.pool-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pool-slot{background:var(--surface-2);border:1px dashed var(--border-2);border-radius:12px;padding:10px;text-align:center;min-height:120px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.pool-slot.filled{border-style:solid}
+.pool-slot .pn{font-weight:700;font-size:.9rem}
+.pool-slot textarea{width:100%;font-size:.78rem;background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:5px 7px;min-height:40px;resize:vertical}
+.week{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+@media(min-width:700px){.week{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1000px){.week{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.day{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:10px 12px}
+.day h4{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.05em;color:var(--gold-2);margin-bottom:6px;display:flex;justify-content:space-between}
+.day h4 small{color:var(--muted);font-weight:500;letter-spacing:0;text-transform:none}
+.day.today{border-color:var(--gold)}
+.footer{margin:30px 0 10px;text-align:center;color:var(--muted);font-size:.78rem}
+.warmup-step{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)}
+.warmup-step.active{border-color:var(--gold);background:var(--gold-dim)}
+.warmup-step.done{opacity:.55}
+.warmup-step .d{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;font-family:var(--font-display);font-size:1.1rem}
+.lvl-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+@media print{.topbar,.bottomnav,.btn,.print-hide{display:none!important}body{background:#fff;color:#000}.card{break-inside:avoid}}
+
+.card table{display:table;width:100%;table-layout:fixed;overflow-wrap:anywhere}
+@media(max-width:600px){.brand-tag{display:none}.brand-name{font-size:1.2rem}.topbar-inner{padding:8px 12px}}
+.tscroll{overflow-x:auto}
+.gear-mobile{background:transparent;border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:inline-grid;place-items:center;color:var(--text-2);cursor:pointer;flex:none}
+.gear-mobile:hover{background:var(--surface-2)}
+@media(min-width:900px){.gear-mobile{display:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M3 11 12 3l9 8v10h-6v-6H9v6H3z"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M7 4v16l14-8z"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 9v4l3 2M9 2h6"/></symbol>
+    <symbol id="i-coach" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 3 14h7l-1 8 10-12h-7z"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3 2 21h20zM12 10v5M12 18v.5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m5 12 5 5 9-10"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2s1 4 4 7c2 2 3 4 3 7a7 7 0 0 1-14 0c0-2 1-4 2-5 0 2 1 3 2 3 0-4 1-8 3-12z"/></symbol>
+    <symbol id="i-yt" viewBox="0 0 24 24"><path fill="currentColor" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2 26 26 0 0 0 2 12a26 26 0 0 0 .4 4.8 2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8A26 26 0 0 0 22 12a26 26 0 0 0-.4-4.8zM10 15V9l5.2 3z"/></symbol>
+    <symbol id="i-sp" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path fill="none" stroke="var(--surface)" stroke-width="1.8" stroke-linecap="round" d="M7 9.5c3.5-1 7.5-.7 10.5 1M7.5 12.5c3-.8 6.2-.5 8.7.9M8 15.3c2.4-.6 4.8-.4 6.8.7"/></symbol>
+    <symbol id="i-dz" viewBox="0 0 24 24"><path fill="currentColor" d="M2 16h4v3H2zM7 13h4v6H7zM12 10h4v9h-4zM17 7h4v12h-4z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m20 20-4-4"/></symbol>
+    <symbol id="i-dragon" viewBox="0 0 24 24"><path fill="currentColor" d="M3 12c2-5 6-7 10-7l-1 3 4-1-1 3 6-1c-2 3-4 4-7 4l1 3-4-1 1 3c-5-1-8-3-9-6z"/></symbol>
+    <symbol id="i-skull" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a8 8 0 0 0-8 8c0 3 1.5 5 3 6v3h10v-3c1.5-1 3-3 3-6a8 8 0 0 0-8-8zm-3 11a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm6 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM9 20h6v2H9z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="5" ry="7" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 7V4M8 4l2 3M16 4l-2 3M4 12h3M17 12h3M5 18l3-2M19 18l-3-2"/></symbol>
+    <symbol id="i-crab" viewBox="0 0 24 24"><ellipse cx="12" cy="13" rx="7" ry="5" fill="currentColor"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 10 3 6M19 10l2-4M6 17l-2 3M18 17l2 3"/></symbol>
+    <symbol id="i-buff" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></symbol>
+    <symbol id="i-elder" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2 5h5l-4 3 2 6-5-3-5 3 2-6-4-3h5zM4 18h16v3H4z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-brain" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 1 5 3 3 0 0 0 4 3h3V3zM15 3a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-1 5 3 3 0 0 1-4 3h-3V3z"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8M9 18h6"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h13l-3-3M20 17H7l3 3"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 6h3c5 0 5 12 10 12h5M3 18h3c2 0 3-2 4-4M14 6h7l-3-3M21 18l-3 3"/></symbol>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#" data-nav="home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#0b1020"/><path d="M12 46 L32 14 L52 46 L42 46 L32 30 L22 46 Z" fill="#c8aa6e"/><path d="M26 46 L32 37 L38 46 Z" fill="#0ac8b9"/></svg>
+      <span><span class="brand-name">Climb</span><span class="brand-tag">Coach tryhard · LoL</span></span>
+    </a>
+    <nav class="topnav" id="topnav">
+      <button data-nav="home">Accueil</button>
+      <button data-nav="session">Session</button>
+      <button data-nav="stats">Stats</button>
+      <button data-nav="tools">Outils</button>
+      <button data-nav="coach">Coach</button>
+      <button data-nav="music">Musique</button>
+      <button data-nav="settings" title="Réglages" aria-label="Réglages"><svg width="18" height="18"><use href="#i-gear"/></svg></button>
+    </nav>
+    <button class="rank-chip" id="rankChip" data-nav="settings" title="Modifier mon rang">
+      <svg class="emblem" id="rankChipEmblem" viewBox="0 0 64 64"></svg>
+      <b id="rankChipTier">—</b><span id="rankChipLp"></span>
+    </button>
+    <button class="gear-mobile" data-nav="settings" title="Réglages" aria-label="Réglages"><svg width="20" height="20"><use href="#i-gear"/></svg></button>
+  </div>
+</header>
+
+<main>
+
+<!-- ===================== ACCUEIL ===================== -->
+<section class="view" id="view-home">
+  <div class="hero">
+    <svg class="emblem" id="heroEmblem" viewBox="0 0 64 64"></svg>
+    <div>
+      <div class="badge gold" id="heroHello">Bienvenue</div>
+      <div class="hero-rank" id="heroRank">Non classé</div>
+      <div class="hero-lp" id="heroLp">Définis ton rang pour commencer à grimper.</div>
+      <div style="margin-top:10px">
+        <div class="tiny muted" id="goalLabel"></div>
+        <div class="progress" id="goalProgress" style="margin-top:4px"><div style="width:0%"></div></div>
+        <div class="tiny muted" id="goalEta" style="margin-top:4px"></div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn primary" data-nav="session"><svg><use href="#i-play"/></svg> Lancer une session</button>
+        <button class="btn" data-nav="tools"><svg><use href="#i-timer"/></svg> Outils in-game</button>
+        <button class="btn ghost" data-nav="settings">Mon rang</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Forme du moment</h2><p class="muted small" id="homePeriod">20 dernières games</p></div>
+  <div class="tiles" id="homeTiles"></div>
+
+  <div class="grid grid-2" style="margin-top:14px">
+    <div class="card span-2">
+      <div class="card-title"><h3>Courbe de LP</h3><span class="tiny muted" id="lpChartNote"></span></div>
+      <div id="lpChartHome"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Le coach dit</h3><span class="badge teal">auto</span></div>
+      <div id="homeInsights" class="grid" style="gap:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Aujourd'hui</h3><span class="tiny muted" id="todayDate"></span></div>
+      <div id="todayBox"></div>
+      <div class="divider"></div>
+      <div id="worldsBox" class="small muted"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SESSION ===================== -->
+<section class="view" id="view-session">
+  <div id="sessionSetup">
+    <div class="section-head"><h2>Nouvelle session</h2><p class="muted small">Un objectif, une humeur, des règles d'arrêt. Comme un vrai entraînement.</p></div>
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title"><h3>1. Check pré-game</h3></div>
+        <div id="pregameChecks"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><h3>2. Objectif de la session</h3></div>
+        <div class="chips" id="goalChips"></div>
+        <input class="input" id="goalCustom" placeholder="Ou ton propre objectif…" style="margin-top:8px">
+        <div class="divider"></div>
+        <div class="card-title"><h3>3. Humeur avant de jouer</h3></div>
+        <div class="scale" id="moodScale"></div>
+        <div class="tiny muted" style="margin-top:4px">1 = tilté / fatigué · 5 = calme et affûté</div>
+        <div class="divider"></div>
+        <div class="frow">
+          <div><label class="field">Games max</label><input class="input" type="number" id="maxGames" min="1" max="15" value="5"></div>
+          <div><label class="field">Pause après</label><select class="input" id="stopAfter"><option value="2">2 défaites d'affilée</option><option value="1">1 défaite</option><option value="3">3 défaites d'affilée</option></select></div>
+        </div>
+        <button class="btn primary block" id="startSession" style="margin-top:12px"><svg><use href="#i-play"/></svg> Démarrer la session</button>
+        <p class="tiny muted" id="coachPreMsg" style="margin-top:8px"></p>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>Échauffement guidé</h2><p class="muted small">10 min en outil d'entraînement avant la première ranked.</p></div>
+    <div class="card">
+      <div id="warmupSteps" class="grid" style="gap:6px"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn teal" id="warmupStart"><svg><use href="#i-play"/></svg> Lancer l'échauffement</button>
+        <button class="btn ghost" id="warmupStop">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sessionLive" class="hidden">
+    <div class="session-banner">
+      <div style="flex:1;min-width:200px">
+        <div class="tiny muted">Objectif de la session</div>
+        <div class="goal" id="liveGoal"></div>
+      </div>
+      <div><div class="tiny muted">Durée</div><b class="mono" id="liveTime">0:00</b></div>
+      <div><div class="tiny muted">Games</div><div class="wl-dots" id="liveDots"></div></div>
+      <div><div class="tiny muted">LP net</div><b class="mono" id="liveLp">0</b></div>
+      <button class="btn sm danger" id="endSession">Terminer</button>
+    </div>
+    <div id="liveCoach" style="margin-top:10px"></div>
+
+    <div class="grid grid-2" style="margin-top:14px">
+      <div class="card">
+        <div class="card-title"><h3>Ajouter une game</h3><span class="tiny muted">30 secondes chrono</span></div>
+        <label class="field">Champion</label>
+        <div class="champ-pick">
+          <input class="input" id="champInput" placeholder="Tape un nom… (ex : Ahri)" autocomplete="off">
+          <div class="champ-list hidden" id="champList"></div>
+        </div>
+        <div class="recent-champs" id="recentChamps"></div>
+        <div class="champ-selected hidden" id="champSelected"></div>
+
+        <label class="field" style="margin-top:10px">Rôle</label>
+        <div class="chips" id="roleChips"></div>
+
+        <label class="field" style="margin-top:10px">Résultat</label>
+        <div class="chips" id="resultChips">
+          <span class="chip win" data-v="W">Victoire</span>
+          <span class="chip loss" data-v="L">Défaite</span>
+          <span class="chip" data-v="R">Remake</span>
+        </div>
+
+        <div class="frow-3" style="margin-top:10px">
+          <div><label class="field">Kills</label><input class="input" type="number" id="gK" min="0" inputmode="numeric"></div>
+          <div><label class="field">Morts</label><input class="input" type="number" id="gD" min="0" inputmode="numeric"></div>
+          <div><label class="field">Assists</label><input class="input" type="number" id="gA" min="0" inputmode="numeric"></div>
+        </div>
+        <div class="frow-3" style="margin-top:10px">
+          <div><label class="field">Durée (min)</label><input class="input" type="number" id="gDur" min="1" placeholder="28" inputmode="numeric"></div>
+          <div><label class="field">CS total</label><input class="input" type="number" id="gCs" min="0" placeholder="180" inputmode="numeric"></div>
+          <div><label class="field">Score vision</label><input class="input" type="number" id="gVis" min="0" placeholder="25" inputmode="numeric"></div>
+        </div>
+        <div class="frow" style="margin-top:10px">
+          <div><label class="field">LP gagnés / perdus</label><input class="input" type="number" id="gLp" placeholder="+20 ou -18" inputmode="numeric"></div>
+          <div><label class="field">Tilt après la game</label><div class="scale" id="tiltScale"></div></div>
+        </div>
+
+        <label class="field" style="margin-top:10px">Erreur principale</label>
+        <div class="chips" id="errChips"></div>
+        <label class="field" style="margin-top:10px">La leçon (1 phrase)</label>
+        <input class="input" id="gLesson" placeholder="Ex : j'ai face-check le bush sans vision à 14 min">
+        <button class="btn primary block" id="saveGame" style="margin-top:12px">Enregistrer la game</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><h3>Games de la session</h3></div>
+        <div class="games" id="sessionGames"></div>
+        <div class="divider"></div>
+        <div class="card-title"><h3>Règles d'arrêt</h3></div>
+        <ul class="clean small" id="stopRulesBox"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Historique</h2><p class="muted small">Dernières games enregistrées</p></div>
+  <div class="card">
+    <div class="games" id="historyGames"></div>
+  </div>
+</section>
+
+<!-- ===================== STATS ===================== -->
+<section class="view" id="view-stats">
+  <div class="section-head"><h2>Statistiques</h2>
+    <div class="chips" id="statsPeriod">
+      <span class="chip on" data-v="7">7 jours</span><span class="chip" data-v="30">30 jours</span><span class="chip" data-v="90">90 jours</span><span class="chip" data-v="0">Tout</span>
+    </div>
+  </div>
+  <div class="chips" id="statsRole" style="margin-bottom:12px"></div>
+  <div class="tiles" id="statsTiles"></div>
+  <div class="grid grid-2" style="margin-top:14px">
+    <div class="card span-2">
+      <div class="card-title"><h3>Progression LP</h3></div>
+      <div id="lpChartStats"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Winrate par champion</h3><span class="tiny muted">games entre parenthèses</span></div>
+      <div id="champBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Erreurs principales</h3><span class="tiny muted">à corriger en priorité</span></div>
+      <div id="errBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Winrate selon l'humeur avant la game</h3></div>
+      <div id="moodBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Winrate selon le n° de game dans la session</h3></div>
+      <div id="orderBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Winrate selon l'heure</h3></div>
+      <div id="hourBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Winrate par rôle</h3></div>
+      <div id="roleBars" class="hbars"></div>
+    </div>
+    <div class="card span-2">
+      <div class="card-title"><h3>Insights</h3></div>
+      <div id="statsInsights" class="grid grid-2" style="gap:8px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== OUTILS ===================== -->
+<section class="view" id="view-tools">
+  <div class="section-head"><h2>Outils in-game</h2><p class="muted small">Sur un 2<sup>e</sup> écran ou ton téléphone. Raccourcis : <span class="kbd">1</span>–<span class="kbd">5</span> flash des lanes, <span class="kbd">G</span> chrono.</p></div>
+
+  <div class="card">
+    <div class="gameclock">
+      <div><div class="tiny muted">Chrono de game</div><div class="time mono" id="gameTime">00:00</div></div>
+      <div class="btn-row">
+        <button class="btn primary" id="clockToggle"><svg><use href="#i-play"/></svg> Démarrer</button>
+        <button class="btn ghost" id="clockReset">Reset</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:end">
+        <div><label class="field">Synchroniser (mm:ss)</label><input class="input" id="clockSync" placeholder="12:30" style="width:110px"></div>
+        <button class="btn" id="clockSyncBtn">OK</button>
+      </div>
+    </div>
+    <p class="tiny muted" style="margin-top:8px">Lance le chrono au « minions spawn » (0:30 dans le jeu, donc tape 0:30) ou synchronise à tout moment avec le temps affiché en jeu.</p>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title"><h3>Tracker de sorts ennemis</h3><span class="tiny muted">clic = utilisé · re-clic = reset</span></div>
+      <div class="spell-rows" id="spellRows"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <label class="chip" id="hasteLucidity">+ Bottes Ionian (10 haste)</label>
+        <label class="chip" id="hasteCosmic">+ Cosmic Insight (18 haste)</label>
+      </div>
+      <p class="tiny muted" style="margin-top:8px">Flash 5:00 · Ignite 3:00 · TP 5:00 (Unleashed 5:00→3:30 selon le niveau) · Exhaust / Heal / Cleanse / Ghost 4:00 · Barrière 3:00 · Smite 1:30. Le texte de chat est copié automatiquement (ex : « mid flash 12:35 »).</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Objectifs (saison 2026)</h3><span class="tiny muted">clique « pris » à la mort de l'objectif</span></div>
+      <div class="objs" id="objRows"></div>
+      <p class="tiny muted" style="margin-top:8px">Alerte sonore 60 s avant chaque spawn majeur (active le son dans les réglages).</p>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Cheat-sheet</h2><p class="muted small">Chiffres à jour patch 26.19 (sept. 2026)</p></div>
+  <div class="grid grid-3">
+    <div class="card">
+      <div class="card-title"><h3>Timeline de la Faille</h3></div>
+      <div class="timeline" id="timelineBox"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Respawn jungle</h3></div>
+      <table id="jungleTable"></table>
+      <p class="tiny muted" style="margin-top:8px">Astuce : quand tu tues un camp, tape son heure dans le chat (« raptors 8:45 ») ou retiens la minute + 2:15.</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Sorts d'invocateur</h3></div>
+      <table id="spellTable"></table>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Gestion de wave</h3></div>
+      <ul class="clean small" id="waveRules"></ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Règle des 3 questions</h3></div>
+      <ul class="clean small">
+        <li><b>Où est le jungler adverse ?</b> S'il vient d'apparaître de l'autre côté, tu as ~60 s de liberté.</li>
+        <li><b>Où est ma wave ?</b> Une wave qui pousse vers l'ennemi = fenêtre pour roam / ward / recall.</li>
+        <li><b>Quel est le prochain objectif ?</b> Prépare la vision 60–90 s avant le spawn, pas au dernier moment.</li>
+      </ul>
+      <div class="divider"></div>
+      <div class="card-title"><h3>Nouveautés 2026</h3></div>
+      <ul class="clean small" id="newsRules"></ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Repères de niveau</h3></div>
+      <table id="benchTable"></table>
+      <p class="tiny muted" style="margin-top:8px">Objectifs indicatifs en solo queue ; l'ADC vise ~0,5 CS/min de plus, le support compte en score de vision.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== COACH ===================== -->
+<section class="view" id="view-coach">
+  <div class="section-head"><h2>Coach</h2><p class="muted small">Le plan d'un athlète appliqué à la Faille.</p></div>
+
+  <div class="card">
+    <div class="card-title"><h3>Plan de la semaine</h3><span class="tiny muted" id="weekLabel"></span></div>
+    <div class="week" id="weekPlan"></div>
+    <p class="tiny muted" style="margin-top:8px">Coche ce que tu as fait ; la semaine se remet à zéro chaque lundi. Le repos fait partie de l'entraînement.</p>
+  </div>
+
+  <div class="section-head"><h2>Fondamentaux par rôle</h2></div>
+  <div class="card">
+    <div class="chips" id="coachRoleChips" style="margin-bottom:8px"></div>
+    <div class="lvl-tabs chips" id="coachLvlChips"></div>
+    <div id="coachContent"></div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:14px">
+    <div class="card">
+      <div class="card-title"><h3>Mon pool de champions</h3><span class="tiny muted">3 max par rôle = tryhard</span></div>
+      <div class="chips" id="poolRoleChips" style="margin-bottom:10px"></div>
+      <div class="pool-grid" id="poolGrid"></div>
+      <div class="divider"></div>
+      <div class="tiny muted" style="margin-bottom:6px">Idées de pool pour ce rôle (à confronter à la tierlist du patch) :</div>
+      <div id="poolSuggest" class="small"></div>
+      <div class="btn-row" style="margin-top:8px" id="tierLinks"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Mental &amp; anti-tilt</h3></div>
+      <ul class="clean small" id="mentalRules"></ul>
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn teal" id="openBreath"><svg><use href="#i-brain"/></svg> Respiration 2 min</button>
+      </div>
+      <div class="divider"></div>
+      <div class="card-title"><h3>Déclencheurs de tilt</h3><span class="tiny muted">coche pour suivre</span></div>
+      <div class="chips" id="tiltTriggers"></div>
+      <div id="tiltTriggerStats" class="tiny muted" style="margin-top:8px"></div>
+    </div>
+    <div class="card span-2">
+      <div class="card-title"><h3>Review de game (5 min, sans replay obligatoire)</h3></div>
+      <div class="grid grid-2">
+        <div>
+          <label class="field">Ma pire mort : pourquoi exactement ?</label><textarea class="input" id="rv1" placeholder="Pas « j'ai été gank » mais « j'étais à 3 vagues de ma tour sans vision à 6:10 »"></textarea>
+          <label class="field" style="margin-top:8px">Une décision macro que je change</label><textarea class="input" id="rv2" placeholder="Ex : recall à 14:00 pour être à 15:00 au herald avec vision"></textarea>
+        </div>
+        <div>
+          <label class="field">Ce que j'ai bien fait (à répéter)</label><textarea class="input" id="rv3"></textarea>
+          <label class="field" style="margin-top:8px">Mon focus pour la prochaine game</label><textarea class="input" id="rv4"></textarea>
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn primary" id="saveReview">Sauvegarder la review</button></div>
+      <div id="reviewList" style="margin-top:12px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== MUSIQUE ===================== -->
+<section class="view" id="view-music">
+  <div class="section-head"><h2>Playlists</h2><p class="muted small">Choisis selon la phase : warm-up, ranked, reset.</p></div>
+  <div class="card">
+    <div class="card-title"><h3>Générateur de playlist de session</h3><span class="badge gold">un peu de tout</span></div>
+    <p class="small muted">Mélange tes styles : phonk, funk brésilien, openings et OST d'anime, vieille chanson française, Riot Music. Chaque piste s'ouvre en recherche YouTube / Spotify / Deezer.</p>
+    <div class="chips" id="mixChips" style="margin:8px 0"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="mixBtn"><svg><use href="#i-shuffle"/></svg> Générer 12 pistes</button>
+      <button class="btn ghost" id="mixCopy"><svg><use href="#i-copy"/></svg> Copier la liste</button>
+    </div>
+    <div class="pl-tracks" id="mixTracks" style="margin-top:10px"></div>
+  </div>
+  <div class="grid grid-2" id="playlists" style="margin-top:14px"></div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-title"><h3>Règles son &amp; focus</h3></div>
+    <ul class="clean small">
+      <li><b>Volume jeu &gt; musique.</b> Les sons de Baron / dragon / pings valent des games. Musique à 30–40 %.</li>
+      <li><b>Paroles = pendant les phases calmes.</b> En lane et en teamfight, l'instrumental (OST, phonk sans voix) garde la charge mentale basse.</li>
+      <li><b>Hype avant, pas pendant.</b> Les openings d'anime et les vieux tubes français = warm-up. La ranked se joue calme.</li>
+      <li><b>Après une défaite : playlist Reset.</b> Une piste douce, 3 minutes, on se lève, on boit, on relit l'objectif.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ===================== RÉGLAGES ===================== -->
+<section class="view" id="view-settings">
+  <div class="section-head"><h2>Réglages</h2></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title"><h3>Mon rang</h3></div>
+      <div class="frow-3">
+        <div><label class="field">Palier</label><select class="input" id="setTier"></select></div>
+        <div><label class="field">Division</label><select class="input" id="setDiv"></select></div>
+        <div><label class="field">LP</label><input class="input" type="number" id="setLp" min="0" max="2000" value="0"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="card-title"><h3>Objectif de saison</h3></div>
+      <div class="frow-3">
+        <div><label class="field">Palier</label><select class="input" id="goalTier"></select></div>
+        <div><label class="field">Division</label><select class="input" id="goalDiv"></select></div>
+        <div><label class="field">Gain LP moyen</label><input class="input" type="number" id="goalGain" placeholder="auto"></div>
+      </div>
+      <button class="btn primary" id="saveRank" style="margin-top:12px">Enregistrer</button>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Profil</h3></div>
+      <div class="frow">
+        <div><label class="field">Pseudo</label><input class="input" id="setName" placeholder="Ton pseudo"></div>
+        <div><label class="field">Rôle principal</label><select class="input" id="setRole"></select></div>
+      </div>
+      <div class="frow" style="margin-top:10px">
+        <div><label class="field">Thème</label><select class="input" id="setTheme"><option value="dark">Sombre (hextech)</option><option value="light">Clair</option></select></div>
+        <div><label class="field">Sons des timers</label><select class="input" id="setSound"><option value="1">Activés</option><option value="0">Coupés</option></select></div>
+      </div>
+      <button class="btn primary" id="saveProfile" style="margin-top:12px">Enregistrer</button>
+      <div class="divider"></div>
+      <div class="card-title"><h3>Données</h3></div>
+      <p class="small muted">Tout est stocké dans ce navigateur (localStorage). Exporte régulièrement pour ne rien perdre, ou pour passer du PC au téléphone.</p>
+      <div class="btn-row">
+        <button class="btn" id="exportBtn">Exporter (JSON)</button>
+        <label class="btn" for="importFile">Importer</label><input type="file" id="importFile" accept="application/json" class="hidden">
+        <button class="btn danger" id="resetBtn">Tout effacer</button>
+      </div>
+      <div class="divider"></div>
+      <p class="tiny muted">Icônes de champions : Data Dragon (Riot Games), version <span id="ddVer">—</span>. CLIMB n'est pas affilié à Riot Games. Sur téléphone : « Ajouter à l'écran d'accueil » pour l'utiliser comme une appli.</p>
+    </div>
+  </div>
+</section>
+
+<div class="footer">CLIMB · fait pour tryhard comme jamais · données patch 26.19 · Worlds 2026 : 15 oct. → 14 nov. (finale à New York)</div>
+</main>
+
+<nav class="bottomnav" id="bottomnav">
+  <button data-nav="home"><svg><use href="#i-home"/></svg>Accueil</button>
+  <button data-nav="session"><svg><use href="#i-play"/></svg>Session</button>
+  <button data-nav="stats"><svg><use href="#i-stats"/></svg>Stats</button>
+  <button data-nav="tools"><svg><use href="#i-timer"/></svg>Outils</button>
+  <button data-nav="coach"><svg><use href="#i-coach"/></svg>Coach</button>
+  <button data-nav="music"><svg><use href="#i-music"/></svg>Musique</button>
+</nav>
+
+<!-- pause / breathing modal -->
+<div class="modal-bg" id="breathModal">
+  <div class="modal">
+    <div class="badge warn" id="breathBadge">Pause obligatoire</div>
+    <h2 style="margin-top:8px" id="breathTitle">Respire avant la prochaine game</h2>
+    <p class="small muted" id="breathSub">Respiration carrée 4-4-4-4. Deux minutes. Le tilt se joue ici, pas dans le chat.</p>
+    <div class="breath"><div class="ring" id="breathRing"></div><div class="txt" id="breathTxt">Prêt ?</div></div>
+    <div style="text-align:center" class="mono"><b id="breathTimer">2:00</b></div>
+    <div id="pauseChecks" style="margin-top:10px"></div>
+    <div class="btn-row" style="margin-top:14px;justify-content:center">
+      <button class="btn teal" id="breathStart">Lancer</button>
+      <button class="btn" id="breathClose">Je suis prêt à rejouer</button>
+      <button class="btn danger" id="breathStop">J'arrête pour aujourd'hui</button>
+    </div>
+  </div>
+</div>
+
+<!-- session summary modal -->
+<div class="modal-bg" id="summaryModal">
+  <div class="modal">
+    <div class="badge gold">Bilan de session</div>
+    <h2 style="margin-top:8px">Session terminée</h2>
+    <div id="summaryBody" style="margin-top:8px"></div>
+    <label class="field" style="margin-top:12px">Objectif atteint ?</label>
+    <div class="chips" id="summaryGoal"><span class="chip win" data-v="1">Oui</span><span class="chip" data-v="0.5">En partie</span><span class="chip loss" data-v="0">Non</span></div>
+    <label class="field" style="margin-top:10px">Note de session</label>
+    <textarea class="input" id="summaryNote" placeholder="Ce que je retiens…"></textarea>
+    <div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn primary" id="summaryClose">Fermer</button></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CLIMB — données statiques
+   ============================================================ */
+'use strict';
+const DD_FALLBACK_VERSION = '16.19.1';
+const CHAMPS_FALLBACK = [["Aatrox","Aatrox"],["Ahri","Ahri"],["Akali","Akali"],["Akshan","Akshan"],["Alistar","Alistar"],["Ambessa","Ambessa"],["Amumu","Amumu"],["Anivia","Anivia"],["Annie","Annie"],["Aphelios","Aphelios"],["Ashe","Ashe"],["AurelionSol","Aurelion Sol"],["Aurora","Aurora"],["Azir","Azir"],["Bard","Bard"],["Belveth","Bel'Veth"],["Blitzcrank","Blitzcrank"],["Brand","Brand"],["Braum","Braum"],["Briar","Briar"],["Caitlyn","Caitlyn"],["Camille","Camille"],["Cassiopeia","Cassiopeia"],["Chogath","Cho'Gath"],["Corki","Corki"],["Darius","Darius"],["Diana","Diana"],["DrMundo","Dr. Mundo"],["Draven","Draven"],["Ekko","Ekko"],["Elise","Elise"],["Evelynn","Evelynn"],["Ezreal","Ezreal"],["Fiddlesticks","Fiddlesticks"],["Fiora","Fiora"],["Fizz","Fizz"],["Galio","Galio"],["Gangplank","Gangplank"],["Garen","Garen"],["Gnar","Gnar"],["Gragas","Gragas"],["Graves","Graves"],["Gwen","Gwen"],["Hecarim","Hecarim"],["Heimerdinger","Heimerdinger"],["Hwei","Hwei"],["Illaoi","Illaoi"],["Irelia","Irelia"],["Ivern","Ivern"],["Janna","Janna"],["JarvanIV","Jarvan IV"],["Jax","Jax"],["Jayce","Jayce"],["Jhin","Jhin"],["Jinx","Jinx"],["KSante","K'Santé"],["Kaisa","Kai'Sa"],["Kalista","Kalista"],["Karma","Karma"],["Karthus","Karthus"],["Kassadin","Kassadin"],["Katarina","Katarina"],["Kayle","Kayle"],["Kayn","Kayn"],["Kennen","Kennen"],["Khazix","Kha'Zix"],["Kindred","Kindred"],["Kled","Kled"],["KogMaw","Kog'Maw"],["Leblanc","LeBlanc"],["LeeSin","Lee Sin"],["Leona","Leona"],["Lillia","Lillia"],["Lissandra","Lissandra"],["Locke","Locke"],["Lucian","Lucian"],["Lulu","Lulu"],["Lux","Lux"],["Malphite","Malphite"],["Malzahar","Malzahar"],["Maokai","Maokai"],["MasterYi","Maître Yi"],["Mel","Mel"],["Milio","Milio"],["MissFortune","Miss Fortune"],["Mordekaiser","Mordekaiser"],["Morgana","Morgana"],["Naafiri","Naafiri"],["Nami","Nami"],["Nasus","Nasus"],["Nautilus","Nautilus"],["Neeko","Neeko"],["Nidalee","Nidalee"],["Nilah","Nilah"],["Nocturne","Nocturne"],["Nunu","Nunu et Willump"],["Olaf","Olaf"],["Orianna","Orianna"],["Ornn","Ornn"],["Pantheon","Pantheon"],["Poppy","Poppy"],["Pyke","Pyke"],["Qiyana","Qiyana"],["Quinn","Quinn"],["Rakan","Rakan"],["Rammus","Rammus"],["RekSai","Rek'Sai"],["Rell","Rell"],["Renata","Renata Glasc"],["Renekton","Renekton"],["Rengar","Rengar"],["Riven","Riven"],["Rumble","Rumble"],["Ryze","Ryze"],["Samira","Samira"],["Sejuani","Sejuani"],["Senna","Senna"],["Seraphine","Seraphine"],["Sett","Sett"],["Shaco","Shaco"],["Shen","Shen"],["Shyvana","Shyvana"],["Singed","Singed"],["Sion","Sion"],["Sivir","Sivir"],["Skarner","Skarner"],["Smolder","Smolder"],["Sona","Sona"],["Soraka","Soraka"],["Swain","Swain"],["Sylas","Sylas"],["Syndra","Syndra"],["TahmKench","Tahm Kench"],["Taliyah","Taliyah"],["Talon","Talon"],["Taric","Taric"],["Teemo","Teemo"],["Thresh","Thresh"],["Tristana","Tristana"],["Trundle","Trundle"],["Tryndamere","Tryndamere"],["TwistedFate","Twisted Fate"],["Twitch","Twitch"],["Udyr","Udyr"],["Urgot","Urgot"],["Varus","Varus"],["Vayne","Vayne"],["Veigar","Veigar"],["Velkoz","Vel'Koz"],["Vex","Vex"],["Vi","Vi"],["Viego","Viego"],["Viktor","Viktor"],["Vladimir","Vladimir"],["Volibear","Volibear"],["Warwick","Warwick"],["MonkeyKing","Wukong"],["Xayah","Xayah"],["Xerath","Xerath"],["XinZhao","Xin Zhao"],["Yasuo","Yasuo"],["Yone","Yone"],["Yorick","Yorick"],["Yunara","Yunara"],["Yuumi","Yuumi"],["Zaahen","Zaahen"],["Zac","Zac"],["Zed","Zed"],["Zeri","Zeri"],["Ziggs","Ziggs"],["Zilean","Zilean"],["Zoe","Zoe"],["Zyra","Zyra"]];
+
+const TIERS = [
+  {id:'IRON', fr:'Fer', color:'#8a8f98', divs:true},
+  {id:'BRONZE', fr:'Bronze', color:'#b0783f', divs:true},
+  {id:'SILVER', fr:'Argent', color:'#a9b7c6', divs:true},
+  {id:'GOLD', fr:'Or', color:'#e2b53e', divs:true},
+  {id:'PLATINUM', fr:'Platine', color:'#3fb6a8', divs:true},
+  {id:'EMERALD', fr:'Émeraude', color:'#2fbf71', divs:true},
+  {id:'DIAMOND', fr:'Diamant', color:'#5aa9ff', divs:true},
+  {id:'MASTER', fr:'Maître', color:'#b86bff', divs:false},
+  {id:'GRANDMASTER', fr:'Grand Maître', color:'#ff5c5c', divs:false},
+  {id:'CHALLENGER', fr:'Challenger', color:'#7fe3ff', divs:false},
+];
+const DIVS = ['IV','III','II','I'];
+
+const ROLES = [
+  {id:'TOP', fr:'Top', short:'Top'},
+  {id:'JUNGLE', fr:'Jungle', short:'Jgl'},
+  {id:'MID', fr:'Mid', short:'Mid'},
+  {id:'ADC', fr:'ADC', short:'ADC'},
+  {id:'SUPPORT', fr:'Support', short:'Supp'},
+];
+
+const GOALS = [
+  '0 mort avant 10 min',
+  'CS ≥ 7 / min à 15 min',
+  'Regarder la minimap toutes les 5 s',
+  'Ward avant chaque objectif',
+  'Recall avec un plan (pas au hasard)',
+  'Mute all, zéro chat',
+  'Jouer safe quand je suis derrière',
+  'Track le jungler adverse (ping)',
+  'Un seul champion toute la session',
+  'Pas de face-check sans vision',
+];
+
+const ERR_TAGS = [
+  {id:'position', fr:'Positionnement', tip:'Tu meurs à cause de ta position : trop avancé sans vision, mal placé en teamfight.'},
+  {id:'greed', fr:'Greed', tip:'Une vague de trop, un dive de trop, un tower-dive sans les infos.'},
+  {id:'vision', fr:'Vision', tip:'Face-check, pas de ward avant l\'objectif, pinks oubliées.'},
+  {id:'wave', fr:'Wave', tip:'Mauvais état de wave avant recall / objectif, pas de freeze quand il fallait.'},
+  {id:'tempo', fr:'Tempo / macro', tip:'Mauvais recall timing, pas au bon endroit pour l\'objectif, side lane au mauvais moment.'},
+  {id:'mental', fr:'Mental', tip:'Tilt, chat, décisions à chaud, abandon mental de la game.'},
+  {id:'mecha', fr:'Mécaniques', tip:'Combo raté, skillshot, kiting, mauvais usage des sorts d\'invocateur.'},
+  {id:'draft', fr:'Draft', tip:'Champion hors pool, contre-pick évitable, compo sans engage / sans frontline.'},
+  {id:'team', fr:'Team diff', tip:'Game injouable de ton point de vue. À utiliser avec parcimonie : maximum 1 fois sur 5.'},
+];
+
+const PREGAME_CHECKS = [
+  'Eau + collation à portée de main',
+  'Téléphone en silencieux, Discord / notifs coupés',
+  'Échauffement fait (outil d\'entraînement ou 1 normal)',
+  'Objectif de session choisi et écrit',
+  'Je sais quels champions je joue (2–3 max)',
+  'Je connais le prochain objectif de mon rôle (grubs 8:00, dragon 5:00, herald 15:00, Baron 20:00)',
+];
+
+const PAUSE_CHECKS = [
+  'Je me lève 2 minutes et je bois',
+  'Je relis mon objectif de session',
+  'Je note LA raison de la défaite (pas 5, une seule)',
+  'Prochaine game : mute all + focus sur mon objectif',
+];
+
+const WARMUP = [
+  {t:'Last-hit sans objets, sans sorts (outil d\'entraînement)', d:180},
+  {t:'Combos du champion : 20 répétitions propres', d:120},
+  {t:'Kiting / orb-walking sur les mannequins', d:120},
+  {t:'Skillshots : 15 tirs en visant les mannequins qui bougent', d:120},
+  {t:'Visualisation : objectif de session + plan de lane des 3 premières minutes', d:60},
+];
+
+const WEEK_PLAN = [
+  {d:'Lundi', items:['15 min mécaniques (outil d\'entraînement)','3 ranked max — focus « 0 mort avant 10 min »','Review : ma pire mort']},
+  {d:'Mardi', items:['20 min VOD review d\'une défaite','2 ranked — focus vision (wards avant objectifs)']},
+  {d:'Mercredi', items:['Étude : 1 matchup difficile de mon pool','3 ranked — focus tempo (recalls, objectifs)']},
+  {d:'Jeudi', items:['Repos ranked : ARAM / normal / autre activité','10 min lecture des patch notes / tierlist']},
+  {d:'Vendredi', items:['Échauffement 10 min','3 ranked — focus gestion de wave','Bilan de la semaine (onglet Stats)']},
+  {d:'Samedi', items:['Bloc long : 5 ranked max avec règle d\'arrêt','Playlist Reset après chaque défaite']},
+  {d:'Dimanche', items:['1 game en outil d\'entraînement sur un champion du pool','Planifier la semaine suivante (objectif + pool)']},
+];
+
+const MENTAL_RULES = [
+  '<b>Règle des 2 défaites :</b> deux défaites d\'affilée = pause obligatoire de 10 min. Trois = fin de session, sans négociation.',
+  '<b>Le chat ne gagne pas de games.</b> Mute all dès le premier message toxique — le tien compris.',
+  '<b>Une game = un focus.</b> Tu ne peux pas corriger 5 choses à la fois ; tu peux en corriger une pendant 30 minutes.',
+  '<b>Séparer le résultat de la performance.</b> Une victoire mal jouée n\'apprend rien ; une défaite bien jouée, si. Note la leçon, pas le score.',
+  '<b>Le tilt commence dans le corps :</b> épaules, mâchoire, respiration courte. Tu le sens → respiration 4-4-4-4 pendant le chargement.',
+  '<b>La ranked n\'est pas un juge.</b> Ton rang est une moyenne mobile, pas une note. Un mauvais soir ne change pas ton niveau réel.',
+];
+
+const TILT_TRIGGERS = ['Flame dans le chat','Jungle diff','Série de défaites','Fatigue / tard le soir','Gank raté / mort tôt','Teammate AFK','Lag / technique','Faim / soif'];
+
+const TIMELINE_2026 = [
+  {t:'0:30', s:'Spawn des sbires (arrivée en lane vers 1:05)'},
+  {t:'0:55', s:'Spawn de tous les camps de jungle (buffs, gromp, loups, raptors, krugs)'},
+  {t:'2:55', s:'Scuttle (crabe) dans les deux rivières · respawn 2:30'},
+  {t:'5:00', s:'Premier dragon élémentaire · respawn 5:00 après chaque kill'},
+  {t:'8:00', s:'Voidgrubs (3 larves, une seule fois) · disparaissent à 14:45'},
+  {t:'15:00', s:'Rift Herald · disparaît à 19:45 · l\'Œil se garde 4 min'},
+  {t:'20:00', s:'Baron Nashor · respawn 6:00 · buff 3 min'},
+  {t:'4e dragon', s:'Âme du dragon pour l\'équipe · l\'Elder spawn 6 min après, puis toutes les 6 min · exécute sous 20 % PV'},
+];
+
+const JUNGLE_TABLE = [
+  ['Buff bleu / rouge','0:55','5:00'],
+  ['Gromp, loups, raptors, krugs','0:55','2:15'],
+  ['Scuttle (rivière)','2:55','2:30'],
+  ['Voidgrubs','8:00','— (14:45 fin)'],
+  ['Rift Herald','15:00','— (19:45 fin)'],
+  ['Dragon','5:00','5:00'],
+  ['Baron','20:00','6:00'],
+  ['Elder','après l\'âme','6:00'],
+];
+
+const SPELLS = [
+  {id:'F', fr:'Flash', cd:300},
+  {id:'IGN', fr:'Ignite', cd:180},
+  {id:'TP', fr:'Téléport', cd:300},
+  {id:'EXH', fr:'Exhaust', cd:240},
+  {id:'HEAL', fr:'Heal', cd:240},
+  {id:'BAR', fr:'Barrière', cd:180},
+  {id:'CLE', fr:'Cleanse', cd:240},
+  {id:'GHO', fr:'Ghost', cd:240},
+  {id:'SMI', fr:'Smite', cd:90},
+];
+
+const SPELL_TABLE_NOTES = [
+  ['Flash','5:00','≈4:33 avec Ionian · ≈4:14 avec Cosmic · ≈3:54 les deux'],
+  ['Téléport','5:00','Unleashed après 10:00 : 5:00 → 3:30 selon le niveau. Quête top : TP gratuit 6:30'],
+  ['Ignite','3:00','Vraie dégâts + anti-soin 3 s'],
+  ['Exhaust','4:00','−35 % dégâts, −40 % vitesse'],
+  ['Heal','4:00','Soin + vitesse, réduit par Ignite'],
+  ['Barrière','3:00','Bouclier 2 s'],
+  ['Cleanse','4:00','Retire les CC (sauf airborne, suppression)'],
+  ['Ghost','4:00','Vitesse 10 s, ignore les collisions'],
+  ['Smite','1:30','Recharge (2 charges), réduit par la haste d\'invocateur'],
+];
+
+const WAVE_RULES = [
+  '<b>Freeze</b> (geler) : garde la wave près de ta tour, ne tue que ce qui te menace. À faire quand tu es <i>devant</i> en lane mais que ton jungler n\'est pas là / que tu n\'as pas de prio ailleurs.',
+  '<b>Slow push</b> : tue les 3 casters, laisse les mêlées → la wave grossit et ira s\'écraser plus tard. À faire <i>avant</i> un recall ou un objectif (dragon / grubs / herald), ~1 min 30 avant.',
+  '<b>Fast push</b> : tout tuer vite pour crash sous tour puis roam / recall / ward. Quand le jungler adverse est loin ou visible ailleurs.',
+  '<b>Recall</b> : après avoir crash la wave sous la tour adverse, avec assez d\'or pour un composant ; jamais avec une wave qui va s\'écraser sous ta tour.',
+  '<b>Ta wave loin de toi = ton timer d\'objectif.</b> Si tu ne peux pas être à l\'objectif avec ton équipe, pousse la lane opposée pour créer une pression.',
+  '<b>Niveau 2 :</b> ~7<sup>e</sup> sbire en solo lane, ~9<sup>e</sup> en duo bot (repère classique) — le premier à lvl 2 gagne le trade.',
+];
+
+const NEWS_2026 = [
+  '<b>Quêtes de rôle :</b> chaque rôle a une quête (sbires, kills, plaques, tours, objectifs) qui donne une récompense — TP gratuit top, bottes T3 mid, 7<sup>e</sup> slot d\'objets bot, PVP Smite jungle, slot de pink support. Progresse plus vite dans ta lane assignée.',
+  '<b>Atakhan retiré</b> et Baron de retour à <b>20:00</b>. Les Feats of Strength sont remplacés par de l\'or : 100 g first blood, 300 g première tour.',
+  '<b>Plaques permanentes</b> sur toutes les tours (y compris internes et inhibiteurs) : chaque plaque = de l\'or, même à 25 min.',
+  '<b>Faelights :</b> emplacements de ward prédéfinis qui donnent une vision étendue. Tes wards y valent double.',
+  '<b>Crystalline Overgrowth :</b> les tours accumulent une charge que n\'importe quel champion consomme en frappant → tout le monde peut push.',
+  '<b>Tout démarre 35 s plus tôt :</b> sbires 0:30, camps 0:55, crabe 2:55. Les monstres épiques évoluent avec le niveau des champions.',
+];
+
+const BENCH = [
+  ['Fer / Bronze','≥ 5 CS/min','≤ 6 morts','≥ 0,8 vision/min','2 champions, 0 mort avant 10 min'],
+  ['Argent / Or','≥ 6 CS/min','≤ 5 morts','≥ 1 vision/min','Freeze / slow push maîtrisés, timers d\'objectifs'],
+  ['Platine / Émeraude','≥ 7 CS/min','≤ 4 morts','≥ 1,2 vision/min','Tempo des recalls, setup vision 90 s avant'],
+  ['Diamant +','≥ 8 CS/min','≤ 3 morts','≥ 1,5 vision/min','Cross-map, gestion des vagues cannon, pool de 3'],
+];
+
+const LEVELS = [
+  {id:'low', fr:'Fer – Bronze'},
+  {id:'mid', fr:'Argent – Or'},
+  {id:'high', fr:'Platine – Émeraude'},
+  {id:'top', fr:'Diamant +'},
+];
+
+/* Contenu coach : rôle × niveau. Chaque entrée : prio (3), erreurs (3), checklist (4), drill. */
+const COACH = {
+  TOP: {
+    intro: 'Le top, c\'est une île avec des règles : la wave, le TP et le jungler adverse. Tu gagnes la lane en gérant la wave, tu gagnes la game en choisissant tes TP.',
+    low: {
+      prio:['CS avant tout : 5+ CS/min, pas de trade qui coûte une wave.','Zéro mort avant 10 min : quand tu ne sais pas où est le jungler, joue derrière ta wave.','Ward le tri-bush ou la rivière à 2:40 (les ganks arrivent à 3:00–3:30).'],
+      err:['Chasser sous la tour ennemie pour finir un kill.','Trade quand la wave adverse est grosse (les sbires font mal).','Recall au hasard : tu perds une wave et des plaques.'],
+      check:['Wave figée ? Je farme, je ne chasse pas.','Jungler adverse vu ailleurs ? Je peux jouer agressif 60 s.','Recall après avoir crash la wave, jamais avant.','TP disponible ? Je le garde pour revenir en lane ou aider bot.'],
+      drill:'Outil d\'entraînement : 10 vagues sans objets, objectif 90 % des CS. Puis 3 ranked avec le seul focus « 0 mort avant 10 ».'
+    },
+    mid: {
+      prio:['Apprends le matchup : qui gagne lvl 1, lvl 2, lvl 6, premier objet ?','Freeze quand tu es devant sans prio, slow push avant recall / objectif.','TP = objectif : un bon TP bot à 8:00 (grubs / dragon) vaut plus qu\'un kill.'],
+      err:['Split push quand l\'équipe se fait engager (regarde la minimap avant de continuer).','Utiliser le TP pour revenir en lane après une mauvaise base.','Perdre les plaques (permanentes en 2026 !) parce que tu ne pushes jamais.'],
+      check:['Prochain objectif → j\'ai un slow push prêt 90 s avant.','Quête de rôle : je farme plaques et sbires en lane pour débloquer le TP gratuit.','Ma wave crash + jungler adverse loin = je prends une plaque.','Je regarde la minimap à chaque retour à la wave.'],
+      drill:'Cette semaine : joue 5 games avec un seul objectif — « utiliser le TP pour un objectif, jamais pour la lane ».'
+    },
+    high: {
+      prio:['Tempo : timing de recall avant grubs (8:00) et herald (15:00) pour arriver avec les objets et la vision.','Jouer autour du jungler adverse : s\'il gank bot, ton side est libre 45 s.','Gestion du split : side quand tu as TP + wave qui pousse + équipe capable de tenir 4v4.'],
+      err:['Trades qui te laissent sans mana / PV au moment où le jungler passe.','Rester side quand le Baron (20:00) est contestable.','Ne pas communiquer ton TP (ping « TP dispo » avant l\'objectif).'],
+      check:['Je trade sur le cooldown clé de l\'adversaire, pas au hasard.','Pré-objectif : wave slow push + TP up + ward faelight.','Je ping mes timers : sorts adverses, TP ennemi (5:00).','Le side push a un but (tour / plaque / forcer un TP), pas juste du farm.'],
+      drill:'VOD review : 3 recalls d\'une game — étaient-ils avant un objectif ? Corrige-en un par game.'
+    },
+    top: {
+      prio:['Cross-map : ta wave qui crash au moment exact où le Baron / dragon spawn.','Gestion des vagues cannon pour dicter les timers de la lane adverse.','Pool de 3 champions couvrant tank / bruiser / split pour la draft.'],
+      err:['Perdre le tempo sur une base « pour l\'or » alors que l\'objectif est dans 40 s.','Sur-forcer un side 1v1 alors que l\'adversaire a TP.','Négliger la vision de ta propre jungle (invades tôt).'],
+      check:['À chaque minute : où est le TP adverse ? où est le mien ?','Je déclenche le side push à partir de la wave, pas de mon envie.','Vision dans la faelight de mon side avant de partir en objectif.','Draft : je pick pour la compo, pas pour la lane.'],
+      drill:'Tracker : note l\'heure de chaque TP adverse dans le chat (« top tp 12:40 »). Objectif : 100 % des TP notés.'
+    }
+  },
+  JUNGLE: {
+    intro: 'Le jungler est le chef d\'orchestre du tempo. Ton clear, tes ganks et tes objectifs sont un plan, pas des réactions aux pings.',
+    low: {
+      prio:['Full clear efficace (≈ 3:00–3:15) puis crabe (2:55) : farm > gank hasardeux.','Objectifs > kills : dragon 5:00, grubs 8:00, herald 15:00, Baron 20:00.','Ne gank que les lanes où l\'ennemi est avancé ; sinon continue de farmer.'],
+      err:['Gank sous la tour parce qu\'on te ping.','Oublier le smite / le rater par stress : cherche la valeur de ton smite sur l\'icône.','Laisser les camps respawn pendant que tu erres (perte d\'or énorme).'],
+      check:['Mon chemin des 3 premières minutes est décidé au chargement.','Après chaque camp : minimap → où est le jungler adverse ?','Avant un objectif : ward + smite dispo + ping l\'équipe 30 s avant.','Recall quand mes camps sont tous morts, pas au milieu du clear.'],
+      drill:'Outil d\'entraînement : 5 full clears chronométrés avec le même champion. Objectif : < 3:20 avec ≥ 80 % PV.'
+    },
+    mid: {
+      prio:['Track le jungler adverse : son premier camp vu → tu sais où il sera 60 s plus tard.','Gank avec un setup : wave gelée vers le tien, ennemi sans flash, ou lane avec CC.','Trade d\'objectifs : si tu ne peux pas contester, prends l\'objectif opposé (grubs ↔ dragon).'],
+      err:['Fake les objectifs sans vision : tu arrives, ils sont déjà dessus.','Invade sans savoir où est le jungler adverse.','Farmer les camps à 100 % PV quand une lane est gankable à 30 s.'],
+      check:['Chaque camp tué = je regarde la minimap 2 s.','Dragon 5:00 → je pathing bot à 4:15 avec la ward.','Grubs 8:00 → prio top / mid gagnée ou je trade dragon.','Smite up + PV suffisants avant de contester.'],
+      drill:'5 games : ping l\'emplacement du jungler adverse dès que tu le vois ou le déduis. Zéro pings inutiles.'
+    },
+    high: {
+      prio:['Tempo de clear : compare ton timing au jungler adverse et invade son 2e quart si tu es en avance.','Vision d\'objectif 60–90 s avant le spawn, avec sweep.','Gank les lanes qui ont prio pour les objectifs à venir, pas celles qui pleurent.'],
+      err:['Force un objectif alors qu\'une lane est morte (4v5 = perte).','Ignorer les quêtes de rôle jungle (PVP Smite, vitesse de déplacement) : les grands monstres progressent la quête.','Contester sans smite fight préparé (plein PV, vision, position).'],
+      check:['Mon plan pour 8:00 (grubs) et 15:00 (herald) est prévu à 5:00.','Vertical jungling quand le jungler adverse est de l\'autre côté.','Recall timings alignés sur les objectifs, jamais 1 min avant.','Deux camps gankables = je gank celui qui donne prio objectif.'],
+      drill:'Review : note le timing de chaque objectif d\'une game et ta position 60 s avant. Corrige un timing par game.'
+    },
+    top: {
+      prio:['Tempo global : dicter quand les fights ont lieu via la vision et les side waves.','Trades cross-map : Baron (20:00) contre 2 tours + dragon, etc.','Draft : pick un jungler qui donne à l\'équipe ce qui lui manque (engage / tank / dégâts).'],
+      err:['Perdre le clear timing d\'une seconde et laisser le crabe / le counter-jungle.','Sur-jouer sa propre avance au lieu de la transformer en tours.','Oublier la gestion des camps respawn à 25 s de l\'objectif.'],
+      check:['Je connais l\'heure de mort de chaque camp adverse (« gromp 12:15 »).','Vision denial avant l\'objectif : sweep + pink.','Je décide de la ligne de fight : mon équipe combat sur la vision.','Chaque gank a un plan de sortie (tour, wards, sorts adverses).'],
+      drill:'Tracker de sorts (onglet Outils) sur les 5 ennemis pendant 3 games. Objectif : 90 % des flashes notés.'
+    }
+  },
+  MID: {
+    intro: 'Le mid, c\'est le centre du plateau : la lane la plus courte, les roams les plus rapides et la vision de rivière. Ta prio de wave se transforme en objectifs pour toute l\'équipe.',
+    low: {
+      prio:['CS : 6+ CS/min, sans mourir au lvl 2/3 (l\'ennemi qui hit lvl 2 en premier a l\'avantage).','Une ward d\'un côté de la rivière à 2:40, respecte le côté non wardé.','Farm & scale : ne suis pas ton jungler dans un mauvais plan.'],
+      err:['Roam vers une lane déjà perdue en laissant ta wave crash sous ta tour.','Utiliser tout ton mana en poke et arriver à 0 pour le vrai trade.','Face-check des bushes à 1:20 sans vision.'],
+      check:['Wave équilibrée ? Je peux ward. Wave qui pousse ? Je peux roam.','Cooldown clé de l\'adversaire utilisé → je trade.','Recall quand j\'ai l\'or pour un composant et que la wave crash sous sa tour.','Minimap toutes les 5 s, surtout quand ma wave est loin.'],
+      drill:'Ajoute un seul son : « minimap » toutes les 5 s pendant 3 games. Note ton nombre de morts « surprise ».'
+    },
+    mid: {
+      prio:['Prio de wave = objectif : shove avant grubs (8:00), dragon (5:00 / 10:00), herald (15:00).','Roam avec un but (bot après un push, quand le jungler adverse est visible ailleurs).','Contrôle de rivière : ward le côté où le jungler adverse va apparaître.'],
+      err:['Roams inutiles qui perdent des plaques et de l\'XP (les plaques sont permanentes en 2026).','Push la wave puis rester passif dessous : utilise le temps (ward, roam, base).','Trade sans compter les sbires : la wave qui te frappe fait la différence.'],
+      check:['Avant chaque objectif : ma wave crash ou est en slow push.','Quand je roam, je ping « on my way » et j\'annonce le retour.','Ward rivière + faelight à chaque recall.','Je note le flash du mid adverse (« mid flash 6:20 »).'],
+      drill:'5 games : chaque roam doit être précédé d\'un push complet. Compte les roams gagnants / perdants.'
+    },
+    high: {
+      prio:['Trades sur CD : chaque trade coûte le mana / la santé de l\'autre au bon moment.','Sync avec ton jungler pour les objectifs : la prio mid décide des grubs et des dragons.','Gestion des vagues cannon pour créer tes fenêtres de roam.'],
+      err:['Perdre le side mid après 20 min : la wave mid ouverte donne le Baron.','Oublier les quêtes de rôle mid (bottes T3 + recall 4 s) : elles rendent tes roams plus rapides.','Suivre le jungler adverse en le tracking mal : décide sur des infos, pas des suppositions.'],
+      check:['Cannon wave chez moi = je freeze / trade ; chez lui = je push et roam.','Objectif dans 90 s : vision posée, wave shove, ping fait.','Mes roams visent la lane qui a un CC / un setup.','Je garde le flash pour les fenêtres de kill, pas pour les frayeurs.'],
+      drill:'VOD : chaque mort avant 15 min — était-ce un roam / une wave / un trade ? Un tag par mort.'
+    },
+    top: {
+      prio:['Cross-map : ta prio + le jungler = 2v1 sur n\'importe quel objectif à 8:00 / 15:00 / 20:00.','Vision denial (sweep) sur les faelights avant les objectifs.','Pool de 3 : un contrôle, un assassin / carry, un pick safe pour la draft.'],
+      err:['Chercher un kill en lane à 12 min alors que le map play vaut plus.','Perdre 10 CS par roam : chaque roam est comptabilisé.','Ne pas adapter tes runes / objets à la game (flat vs scaling).'],
+      check:['Je sais où sont les 5 ennemis ou je joue comme s\'ils étaient à côté.','Chaque recall a un objectif : objet + ward + timing.','Je communique les timers en chat (« bot flash 14:12 »).','Draft : je pick pour la compo et le matchup, pas pour l\'ego.'],
+      drill:'Journal : après chaque game, note ta différence de CS à 15 min. Objectif : + 10 en moyenne sur 10 games.'
+    }
+  },
+  ADC: {
+    intro: 'L\'ADC gagne les games qu\'il ne perd pas : 7 CS/min, positionnement, patience. Tu es le DPS du late game — encore faut-il y arriver en vie.',
+    low: {
+      prio:['CS, CS, CS : 6+ CS/min. Chaque sbire manqué est un objet en moins à 25 min.','Position derrière le support ; ne dépasse jamais la ligne de tes sbires sans info.','Ne meurs pas dans la lane : si tu es à 40 % PV sans flash, tu recall.'],
+      err:['Suivre le support dans un all-in sans regarder les cooldowns adverses.','Rester en lane à 100 % de mana / PV alors que la wave a crash (base !).','Auto-attack un tank en teamfight au lieu de la cible la plus proche.'],
+      check:['Cible la plus proche en teamfight, toujours.','Hook adverse en CD ? 10 s pour trader / farmer libre.','Pink à chaque recall, posée dans un bush de lane ou de rivière.','Je regarde la minimap quand le jungler adverse est invisible.'],
+      drill:'Outil d\'entraînement : 5 min de last-hit sous tour (2 auto + 1 sort). Objectif : 0 sbire perdu sous tour.'
+    },
+    mid: {
+      prio:['Gestion de wave 2v2 : freeze quand tu es devant, slow push avant dragon (5:00 / 10:00).','Trades sur cooldown : après son engage raté, tu as 10–20 s de dégâts gratuits.','Kiting : practice tool 5 min par jour, orb-walk sans regarder ton champion.'],
+      err:['Base sans avoir crash la wave : tu perds une vague + une plaque.','Rester sous tour quand la wave push et que le jungler adverse est là (dive).','Tirer sur la cible la plus loin « parce qu\'elle est fragile ».'],
+      check:['Wave crashée avant chaque base ; slow push avant dragon.','Je connais le cooldown de l\'engage adverse (hook 20 s, all-in lvl 2).','Fin de lane (tour bot) → je passe mid ou je prends les plaques permanentes.','Pinks tous les 4 min sur la vision du dragon.'],
+      drill:'5 games avec un seul objectif : « 7 CS/min à 15 min ». Note le chiffre dans la game.'
+    },
+    high: {
+      prio:['Tempo bot : recall timings alignés sur le dragon (5:00 + 5 min).','Positionnement en teamfight = distance de la menace + ligne de fuite ; ton support et ton frontline sont ta portée.','Side lane après la lane : les plaques permanentes récompensent le push de l\'ADC.'],
+      err:['Mourir sur une gank au moment de la quête de rôle bot (l\'or est perdu).','Flash offensif quand le fight est déjà gagné.','Négliger les bottes T3 / 7e slot d\'objet bot de la quête de rôle : c\'est un objet gratuit.'],
+      check:['Dragon dans 90 s → wave slow push, pinks posées, jungler averti.','Je tire sans bouger inutilement : uptime DPS > 80 % du fight.','Le side push a une sortie (ward + TP allié + flash).','Je note les flashes adverses bot (« bot flash 4:20 »).'],
+      drill:'Review : chaque teamfight → « était-ce ma cible la plus proche ? ». Corrige un fight par game.'
+    },
+    top: {
+      prio:['Lane swap / tempo : décide avec le support quand échanger de côté selon le jungler adverse.','Uptime DPS : chaque seconde sans auto-attack en fight est un DPS perdu.','Pool de 3 couvrant : hyper-carry, lane bully, utility / poke.'],
+      err:['Perdre 2 vagues pour un roam mid que le support pouvait faire seul.','Trades qui sont gagnants en PV mais perdants en CS / plaques.','Jouer les fights sur des estimations de dégâts au lieu de vérifier les objets adverses (Tab).'],
+      check:['Tab à chaque recall : objets adverses et threats.','Chaque base est planifiée avec un objectif d\'objet.','Je commande la vision bot au support (ping ward / pink).','Draft : je pick pour le scaling de la compo, pas pour la lane.'],
+      drill:'Compte tes auto-attaques par teamfight (vidéo). Objectif : + 20 % d\'uptime en 2 semaines.'
+    }
+  },
+  SUPPORT: {
+    intro: 'Le support voit tout : vision, tempo, protection. Le meilleur support de la game n\'est pas celui qui a le plus d\'assists, c\'est celui qui a la carte.',
+    low: {
+      prio:['Vision : ward tri-bush / rivière à 2:40, faelights dès qu\'elles apparaissent.','Ne prends pas de CS ; laisse l\'ADC farmer et reste entre lui et la menace.','Une pink à chaque recall, posée dans le bush du dragon ou de lane.'],
+      err:['Face-check la rivière seul pour poser une ward.','Roam mid en laissant l\'ADC 1v2 avec une wave qui pousse vers lui.','Engage sans regarder les sorts adverses ni la position du jungler.'],
+      check:['Wards posées ? Une rivière + une faelight avant 3:00.','Je roam seulement quand ma wave pousse vers l\'ennemi.','Pink dispo à chaque recall (500 g d\'assurance vie).','Slot de pink de la quête de rôle utilisé en priorité.'],
+      drill:'5 games avec un seul objectif : « 1 pink toutes les 4 min, 0 face-check ». Note ton score de vision.'
+    },
+    mid: {
+      prio:['Engage sur cooldown adverse (flash, CC, sorts défensifs).','Roams à timing : après un crash, avec un ping au jungler pour un dive / grubs.','Setup des objectifs : wards à 60 s avant le dragon, sweep avant le herald.'],
+      err:['Tanker les plaques adverses sans protection quand la wave push.','Wards en lane à 15 min alors que l\'objectif est ailleurs.','Rester derrière l\'ADC en teamfight quand il faut peel ou engager.'],
+      check:['Objectif dans 90 s → wards + sweep + ping.','Je connais le cooldown de l\'engage / du flash de l\'adversaire.','Chaque roam est annoncé et a un retour prévu.','Je track le jungler adverse et je ping sa position.'],
+      drill:'5 games : chaque objectif majeur (dragon, grubs, herald) doit avoir 2 wards posées 60 s avant.'
+    },
+    high: {
+      prio:['Contrôle de vision adverse : sweep et pinks dans leurs faelights, pas les tiennes.','Macro calls : tu vois la carte, tu annonces le prochain objectif et la ligne de fight.','Tempo bot : recall en même temps que l\'ADC ou de façon décalée pour ne jamais perdre la lane.'],
+      err:['Pinks « à ta place » : la vision qui compte est celle qui dénie la leur.','Engage tôt alors que ton carry n\'a pas ses cooldowns.','Perdre de l\'or de support (quête de rôle) en volant des CS.'],
+      check:['Vision offensive (chez eux) avant objectif, défensive quand on est derrière.','Je décide la ligne de fight : mon équipe combat sur la vision.','Chaque ward posée a une raison (jungler, objectif, flanc).','Je communique le prochain objectif 2 minutes avant.'],
+      drill:'Review : 3 wards par game → « ont-elles servi ? ». Corrige une position de ward par game.'
+    },
+    top: {
+      prio:['Tempo global de l\'équipe : les recalls, les rotations et les objectifs passent par toi.','Vision offensive systématique dans les faelights adverses avant chaque objectif.','Pool de 3 couvrant engage / enchanteur / poke pour la draft.'],
+      err:['Se laisser gank en roam avec une ward qui manque de 5 s.','Engager sur le mauvais membre de l\'équipe adverse (regarde les objets).','Ne pas gérer les pinks adverses : sweep avant de poser.'],
+      check:['Je connais les sorts adverses et les annonce en chat.','Chaque objectif est préparé 2 min avant (vision, wave, positions).','Les peels priorisent le carry qui gagne le fight, pas celui qui pleure.','Draft : engage ou enchant selon la compo et le jungler.'],
+      drill:'Chaque game : note le nombre de wards adverses détruites. Objectif : ≥ 4 par game.'
+    }
+  }
+};
+
+/* Idées de pool par rôle et niveau — à vérifier avec la tierlist du patch */
+const POOL_SUGGEST = {
+  TOP:{low:['Garen','Malphite','Darius','Sett','Mordekaiser','Nasus'],mid:['Jax','Aatrox','Renekton','Ornn','Gwen','Gragas'],high:['Fiora','Camille','Aatrox','Jayce','K\'Santé','Rumble'],top:['Fiora','Camille','Riven','Gangplank','K\'Santé','Jayce']},
+  JUNGLE:{low:['Warwick','Amumu','Maître Yi','Nocturne','Vi','Xin Zhao'],mid:['Vi','Jarvan IV','Hecarim','Lillia','Diana','Zac'],high:['Lee Sin','Graves','Kha\'Zix','Viego','Kindred','Elise'],top:['Lee Sin','Nidalee','Graves','Viego','Kindred','Elise']},
+  MID:{low:['Annie','Malzahar','Lux','Galio','Ahri','Vex'],mid:['Ahri','Syndra','Orianna','Galio','Viktor','Hwei'],high:['Sylas','Akali','Yone','Azir','Hwei','LeBlanc'],top:['Azir','LeBlanc','Sylas','Akali','Zed','Corki']},
+  ADC:{low:['Miss Fortune','Jinx','Caitlyn','Ashe','Jhin','Sivir'],mid:['Jinx','Kai\'Sa','Ezreal','Jhin','Varus','Xayah'],high:['Kai\'Sa','Ezreal','Aphelios','Zeri','Draven','Lucian'],top:['Kai\'Sa','Aphelios','Kalista','Zeri','Draven','Lucian']},
+  SUPPORT:{low:['Leona','Nautilus','Lulu','Soraka','Blitzcrank','Braum'],mid:['Nautilus','Rakan','Karma','Milio','Bard','Alistar'],high:['Thresh','Rakan','Pyke','Bard','Renata Glasc','Rell'],top:['Thresh','Rakan','Pyke','Bard','Alistar','Nami']},
+};
+
+/* Playlists */
+const PLAYLISTS = [
+  {id:'phonk', search:'phonk gaming', name:'Tryhard Focus', sub:'Phonk & drift phonk — tempo régulier, pas de paroles', color:'#7c3aed', phase:'Ranked', tag:'FOCUS',
+    tracks:[['Murder In My Mind','Kordhell'],['Metamorphosis','Interworld'],['Close Eyes','DVRST'],['Rave','Dxrk ダーク'],['Neon Blade','MoonDeity'],['Sahara','Hensonn'],['Scary Garry','Kaito Shoma'],['Brodyaga Funk','Eternxlkz'],['Live Another Day','Kordhell'],['Killers From The Northside','Kordhell'],['Passo Bem Solto','ATLXS'],['Aura','Ogryzek']]},
+  {id:'funk', search:'funk brasileiro mandelão', name:'Baile de Faille', sub:'Funk brésilien, mandelão, phonk BR — énergie pour warm-up et fin de session', color:'#059669', phase:'Warm-up', tag:'HYPE',
+    tracks:[['Bumbum Tam Tam','MC Fioti'],['Baile de Favela','MC João'],['Olha a Explosão','MC Kevinho'],['Envolver','Anitta'],['Malvadão 3','Xamã'],['Automotivo Bibi Fogosa','Bibi Babydoll, DJ Brunin XM'],['Montagem Tomada','LXNGVX'],['Ela É do Tipo','Kevin O Chris'],['Vai Malandra','Anitta, Mc Zaac, Maejor'],['Montagem Coral','Ariis'],['Bololo Haha','MC Bin Laden'],['Dança do Créu','MC Créu']]},
+  {id:'op', search:'anime openings hype', name:'Openings Warm-up', sub:'Openings d\'anime — hype maximale avant la première ranked', color:'#dc2626', phase:'Warm-up', tag:'HYPE',
+    tracks:[['Gurenge','LiSA — Demon Slayer'],['Unravel','TK from Ling tosite sigure — Tokyo Ghoul'],['Kaikai Kitan','Eve — Jujutsu Kaisen'],['A Cruel Angel\'s Thesis','Yoko Takahashi — Evangelion'],['Silhouette','KANA-BOON — Naruto Shippuden'],['Blue Bird','Ikimonogakari — Naruto Shippuden'],['Again','YUI — Fullmetal Alchemist Brotherhood'],['The Rumbling','SiM — L\'Attaque des Titans'],['Guren no Yumiya','Linked Horizon — L\'Attaque des Titans'],['Inferno','Mrs. GREEN APPLE — Fire Force'],['Peace Sign','Kenshi Yonezu — My Hero Academia'],['Idol','YOASOBI — Oshi no Ko'],['KICK BACK','Kenshi Yonezu — Chainsaw Man'],['SPECIALZ','King Gnu — Jujutsu Kaisen'],['Bling-Bang-Bang-Born','Creepy Nuts — Mashle'],['Sign','FLOW — Naruto Shippuden'],['Colors','FLOW — Code Geass'],['Zankyou Sanka','Aimer — Demon Slayer'],['LEveL','SawanoHiroyuki[nZk]:TOMORROW X TOGETHER — Solo Leveling']]},
+  {id:'ost', search:'anime ost instrumental', name:'OST Anime Focus', sub:'Bandes originales instrumentales — concentration en ranked', color:'#2563eb', phase:'Ranked', tag:'FOCUS',
+    tracks:[['Vogel im Käfig','Hiroyuki Sawano — L\'Attaque des Titans'],['ətˈæk 0N tάɪtn','Hiroyuki Sawano — L\'Attaque des Titans'],['Sadness and Sorrow','Toshio Masuda — Naruto'],['L\'s Theme','Yoshihisa Hirano & Hideki Taniuchi — Death Note'],['Kamado Tanjiro no Uta','Go Shiina — Demon Slayer'],['Gojo\'s Theme','Hiroaki Tsutsumi — Jujutsu Kaisen'],['Number One','Hazel Fernandes — Bleach'],['Overtaken','Kohei Tanaka — One Piece'],['Small Village','Yutaka Yamada — Vinland Saga'],['Hanezeve Caradhina','Kevin Penkin — Made in Abyss'],['Tank!','Seatbelts — Cowboy Bebop'],['Decisive Battle','Shiro Sagisu — Evangelion'],['Sparkle','RADWIMPS — Your Name'],['One Summer\'s Day','Joe Hisaishi — Le Voyage de Chihiro'],['Kimi no Na wa (Your Name) — Theme','RADWIMPS — Your Name']]},
+  {id:'fr-hype', search:'tubes français années 80', name:'Vieille France — Hype', sub:'Les tubes qui font lever la salle — warm-up et célébration', color:'#d97706', phase:'Warm-up', tag:'HYPE',
+    tracks:[['Les Lacs du Connemara','Michel Sardou'],['Quand la musique est bonne','Jean-Jacques Goldman'],['Alexandrie Alexandra','Claude François'],['Allumer le feu','Johnny Hallyday'],['L\'Aventurier','Indochine'],['Marcia Baila','Les Rita Mitsouko'],['Ça (c\'est vraiment toi)','Téléphone'],['Les Champs-Élysées','Joe Dassin'],['Le Chanteur','Daniel Balavoine'],['On ira tous au paradis','Michel Polnareff'],['Je te donne','Jean-Jacques Goldman & Michael Jones'],['Les Cactus','Jacques Dutronc'],['Un autre monde','Téléphone'],['Cendrillon','Téléphone'],['Ella, elle l\'a','France Gall']]},
+  {id:'fr-chill', search:'chanson française classique', name:'Vieille France — Reset', sub:'Chanson française douce — après une défaite, 3 minutes de calme', color:'#0891b2', phase:'Reset', tag:'RESET',
+    tracks:[['La Bohème','Charles Aznavour'],['Ne me quitte pas','Jacques Brel'],['La Vie en rose','Édith Piaf'],['Les Copains d\'abord','Georges Brassens'],['Mistral gagnant','Renaud'],['Foule sentimentale','Alain Souchon'],['Le Sud','Nino Ferrer'],['Emmenez-moi','Charles Aznavour'],['Belle-Île-en-Mer, Marie-Galante','Laurent Voulzy'],['Je l\'aime à mourir','Francis Cabrel'],['L\'Aigle noir','Barbara'],['Je suis venu te dire que je m\'en vais','Serge Gainsbourg'],['Osez Joséphine','Alain Bashung'],['SOS d\'un terrien en détresse','Daniel Balavoine'],['Il est cinq heures, Paris s\'éveille','Jacques Dutronc']]},
+  {id:'riot', search:'Riot Games Music Worlds anthems', name:'Riot Music', sub:'Hymnes Worlds, K/DA, Pentakill, Arcane — l\'esprit de la Faille', color:'#b45309', phase:'Warm-up', tag:'HYPE',
+    tracks:[['Warriors','Imagine Dragons — Worlds 2014'],['Legends Never Die','Against The Current — Worlds 2017'],['RISE','The Glitch Mob, Mako, The Word Alive — Worlds 2018'],['Phoenix','Cailin Russo & Chrissy Costanza — Worlds 2019'],['Take Over','Jeremy McKinnon, MAX, Henry — Worlds 2020'],['Burn It All Down','PVRIS — Worlds 2021'],['STAR WALKIN\'','Lil Nas X — Worlds 2022'],['GODS','NewJeans — Worlds 2023'],['Heavy Is the Crown','Linkin Park — Worlds 2024'],['Sacrifice','G.E.M. — Worlds 2025'],['POP/STARS','K/DA'],['MORE','K/DA'],['THE BADDEST','K/DA'],['GIANTS','True Damage'],['Mortal Reminder','Pentakill'],['Lightbringer','Pentakill'],['PARANOIA','HEARTSTEEL'],['Enemy','Imagine Dragons & JID — Arcane'],['Ma Meilleure Ennemie','Stromae & Pomme — Arcane'],['To Ashes and Blood','Woodkid — Arcane'],['Playground','Bea Miller — Arcane'],['Get Jinxed','Djerv']]},
+  {id:'reset', search:'anime calm songs', name:'Reset anime', sub:'Morceaux calmes d\'anime — respiration entre deux games', color:'#7c2d12', phase:'Reset', tag:'RESET',
+    tracks:[['Nandemonaiya','RADWIMPS — Your Name'],['Hikaru Nara','Goose house — Your Lie in April'],['Orange','7!! — Your Lie in April'],['Kimi no Shiranai Monogatari','supercell — Bakemonogatari'],['Aoi Shiori','Galileo Galilei — Anohana'],['Secret Base (Kimi ga Kureta Mono)','ZONE — Anohana'],['Uchiage Hanabi','DAOKO & Kenshi Yonezu'],['Merry-Go-Round of Life','Joe Hisaishi — Le Château ambulant'],['Path of the Wind','Joe Hisaishi — Mon voisin Totoro'],['Lemon','Kenshi Yonezu'],['Grand Escape','RADWIMPS — Les Enfants du temps'],['Wind','Akeboshi — Naruto']]},
+];
+
+/* ============================================================
+   CLIMB — application (core)
+   ============================================================ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const pad2 = n => String(n).padStart(2, '0');
+const mmss = secs => { secs = Math.max(0, Math.round(secs)); return Math.floor(secs/60) + ':' + pad2(secs%60); };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const pct = (w, g) => g ? Math.round(100*w/g) : 0;
+const dayKey = ts => { const d = new Date(ts); return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); };
+const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', {day:'numeric', month:'short'});
+const fmtDateTime = ts => new Date(ts).toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) + ' ' + new Date(ts).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+const svgUse = (id, size=18) => `<svg width="${size}" height="${size}" aria-hidden="true"><use href="#${id}"/></svg>`;
+
+let toastT = null;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* ---------- state ---------- */
+const KEY = 'climb.v1';
+function defaultState(){
+  return {
+    profile: { name:'', mainRole:'MID' },
+    rank: { tier:'', div:'IV', lp:0 },
+    goal: { tier:'', div:'IV', gain:null },
+    games: [],
+    sessions: [],
+    session: null,
+    pool: { TOP:[], JUNGLE:[], MID:[], ADC:[], SUPPORT:[] },
+    reviews: [],
+    tilt: {},
+    week: { key:'', done:{} },
+    settings: { theme:'dark', sound:true, ddVersion:DD_FALLBACK_VERSION, champCache:null },
+    clock: { running:false, startedAt:0, offset:0 },
+    spells: null,
+    obj: null,
+    haste: { lucidity:false, cosmic:false },
+  };
+}
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const d = defaultState();
+    for (const k of Object.keys(d)) if (parsed[k] === undefined) parsed[k] = d[k];
+    parsed.settings = Object.assign(d.settings, parsed.settings || {});
+    return parsed;
+  } catch(e){ return null; }
+}
+let S = load() || defaultState();
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+/* ---------- champions ---------- */
+let CHAMPS = (S.settings.champCache && S.settings.champCache.length > 100) ? S.settings.champCache : CHAMPS_FALLBACK.slice();
+let DD_VER = S.settings.ddVersion || DD_FALLBACK_VERSION;
+const norm = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+const champImg = id => `https://ddragon.leagueoflegends.com/cdn/${DD_VER}/img/champion/${id}.png`;
+const champName = id => { const c = CHAMPS.find(x => x[0] === id); return c ? c[1] : id; };
+const champIni = id => { const n = champName(id).replace(/[^A-Za-zÀ-ÿ' ]/g, ''); const parts = n.split(/[\s']+/).filter(w => w.length > 2 || /^[A-Z]/.test(w)); return parts.length > 1 ? (parts[0][0] + parts[1][0]) : n.slice(0, 2); };
+const champIcon = (id, cls='') => id ? `<span class="cicon ph ${cls}" data-ini="${esc(champIni(id))}" title="${esc(champName(id))}"><img src="${champImg(id)}" alt="" loading="lazy" onerror="this.remove()"></span>` : `<span class="cicon ${cls}"></span>`;
+function findChamps(q, limit=8){
+  const n = norm(q); if (!n) return [];
+  const starts = [], inc = [];
+  for (const c of CHAMPS){ const cn = norm(c[1]), ci = norm(c[0]); if (cn.startsWith(n) || ci.startsWith(n)) starts.push(c); else if (cn.includes(n) || ci.includes(n)) inc.push(c); }
+  return starts.concat(inc).slice(0, limit);
+}
+async function refreshDD(){
+  try {
+    const v = await (await fetch('https://ddragon.leagueoflegends.com/api/versions.json', {cache:'no-store'})).json();
+    if (!Array.isArray(v) || !v[0]) return;
+    const ver = v[0];
+    if (ver !== DD_VER || !S.settings.champCache){
+      const data = await (await fetch(`https://ddragon.leagueoflegends.com/cdn/${ver}/data/fr_FR/champion.json`)).json();
+      const list = Object.values(data.data).map(c => [c.id, c.name]).sort((a,b) => a[1].localeCompare(b[1], 'fr'));
+      if (list.length > 100){ CHAMPS = list; S.settings.champCache = list; }
+    }
+    DD_VER = ver; S.settings.ddVersion = ver; save();
+    const el = $('#ddVer'); if (el) el.textContent = ver + ' (patch 26.' + (ver.split('.')[1]||'?') + ')';
+  } catch(e){ /* hors ligne : liste embarquée */ }
+}
+
+/* ---------- rang ---------- */
+const tierIdx = id => Math.max(0, TIERS.findIndex(t => t.id === id));
+function rankAbs(r){
+  if (!r || !r.tier) return null;
+  const ti = tierIdx(r.tier);
+  if (!TIERS[ti].divs) return 2800 + (r.lp||0);
+  const di = Math.max(0, DIVS.indexOf(r.div||'IV'));
+  return ti*400 + di*100 + (r.lp||0);
+}
+function absToLabel(abs){
+  if (abs == null) return '—';
+  if (abs >= 2800) return 'Maître+ ' + (abs-2800) + ' LP';
+  const ti = Math.floor(abs/400), di = Math.floor((abs%400)/100);
+  return TIERS[ti].fr + ' ' + DIVS[di];
+}
+function rankLabel(r){
+  if (!r || !r.tier) return 'Non classé';
+  const t = TIERS[tierIdx(r.tier)];
+  return t.divs ? `${t.fr} ${r.div||'IV'}` : t.fr;
+}
+function tierColor(id){ const t = TIERS.find(x => x.id === id); return t ? t.color : '#8a8f98'; }
+function applyLp(delta){
+  const r = S.rank; if (!r.tier || !delta) return;
+  const t = TIERS[tierIdx(r.tier)];
+  let lp = (r.lp||0) + delta;
+  if (t.divs){
+    while (lp >= 100){
+      lp -= 100;
+      const di = DIVS.indexOf(r.div||'IV');
+      if (di < 3) r.div = DIVS[di+1];
+      else { const ti = tierIdx(r.tier); if (ti < 6){ r.tier = TIERS[ti+1].id; r.div = 'IV'; } else { r.tier = 'MASTER'; r.div = ''; lp = Math.max(0, lp); toast('Promotion Maître !'); break; } }
+      toast('Promotion : ' + rankLabel(r) + ' !');
+    }
+    while (lp < 0){
+      const di = DIVS.indexOf(r.div||'IV');
+      if (di > 0){ r.div = DIVS[di-1]; lp += 100; lp = Math.min(lp, 75); }
+      else { const ti = tierIdx(r.tier); if (ti > 0){ r.tier = TIERS[ti-1].id; r.div = 'I'; lp = 75; } else { lp = 0; } }
+      if (lp >= 0) toast('Rétrogradation : ' + rankLabel(r));
+    }
+  } else {
+    if (lp < 0){ r.tier = 'DIAMOND'; r.div = 'I'; lp = 75; toast('Rétrogradation : Diamant I'); }
+  }
+  r.lp = Math.round(lp);
+}
+function emblemSVG(tierId, div){
+  const c = tierColor(tierId || '');
+  const hasTier = !!tierId;
+  const t = TIERS.find(x => x.id === tierId);
+  const numeral = hasTier && t && t.divs ? (div||'IV') : '';
+  return `<defs><linearGradient id="eg${tierId||'none'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".95"/><stop offset="1" stop-color="${c}" stop-opacity=".45"/></linearGradient></defs>
+  <path d="M32 3 L57 13 V34 C57 48 45 58 32 62 C19 58 7 48 7 34 V13 Z" fill="${hasTier ? `url(#eg${tierId})` : 'rgba(127,136,156,.3)'}" stroke="#c8aa6e" stroke-width="2"/>
+  <path d="M32 11 L50 18 V34 C50 44 41 52 32 55 C23 52 14 44 14 34 V18 Z" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+  ${numeral ? `<text x="32" y="41" text-anchor="middle" font-family="Rajdhani, Inter, sans-serif" font-weight="700" font-size="22" fill="#0b1020">${numeral}</text>` : (hasTier ? `<path d="M32 22 L36 31 L46 32 L38 38 L41 48 L32 42 L23 48 L26 38 L18 32 L28 31 Z" fill="#0b1020" opacity=".8"/>` : `<text x="32" y="41" text-anchor="middle" font-family="Rajdhani, Inter, sans-serif" font-weight="700" font-size="22" fill="#0b1020">?</text>`)}`;
+}
+function renderRankChip(){
+  $('#rankChipEmblem').innerHTML = emblemSVG(S.rank.tier, S.rank.div);
+  $('#rankChipTier').textContent = rankLabel(S.rank);
+  $('#rankChipLp').textContent = S.rank.tier ? (S.rank.lp||0) + ' LP' : '';
+}
+
+/* ---------- navigation ---------- */
+const VIEWS = ['home','session','stats','tools','coach','music','settings'];
+let currentView = 'home';
+function nav(id){
+  if (!VIEWS.includes(id)) id = 'home';
+  currentView = id;
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
+  $$('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === id && (b.closest('#topnav') || b.closest('#bottomnav'))));
+  try { history.replaceState(null, '', '#' + id); } catch(e){}
+  window.scrollTo({top:0, behavior:'instant'});
+  render(id);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-nav]'); if (!b) return;
+  e.preventDefault(); nav(b.dataset.nav);
+});
+
+/* ---------- calculs de stats ---------- */
+function gamesSorted(){ return S.games.slice().sort((a,b) => a.ts - b.ts); }
+function kda(g){ return g.d ? ((g.k||0)+(g.a||0))/g.d : ((g.k||0)+(g.a||0)); }
+function csmin(g){ return (g.cs && g.dur) ? g.cs/g.dur : null; }
+function streak(games){ // games chronologiques
+  let n = 0, type = null;
+  for (let i = games.length-1; i >= 0; i--){ const r = games[i].result; if (r === 'R') continue; if (!type){ type = r; n = 1; } else if (r === type) n++; else break; }
+  return { type, n };
+}
+function summarize(games){
+  const played = games.filter(g => g.result !== 'R');
+  const w = played.filter(g => g.result === 'W').length;
+  const ks = played.reduce((a,g) => a+(g.k||0), 0), ds = played.reduce((a,g) => a+(g.d||0), 0), as = played.reduce((a,g) => a+(g.a||0), 0);
+  const csl = played.map(csmin).filter(x => x != null);
+  const vis = played.filter(g => g.vis != null && g.dur).map(g => g.vis/g.dur);
+  const lp = played.reduce((a,g) => a+(g.lp||0), 0);
+  const lpGames = played.filter(g => g.lp != null && g.lp !== 0);
+  return {
+    n: played.length, w, l: played.length - w, wr: pct(w, played.length),
+    kda: ds ? (ks+as)/ds : (ks+as), k: ks, d: ds, a: as,
+    cs: csl.length ? csl.reduce((a,b) => a+b, 0)/csl.length : null,
+    vis: vis.length ? vis.reduce((a,b) => a+b, 0)/vis.length : null,
+    lp, lpAvg: lpGames.length ? lp/lpGames.length : null,
+    streak: streak(games),
+  };
+}
+function groupWR(games, keyFn, order){
+  const m = {};
+  for (const g of games){ if (g.result === 'R') continue; const k = keyFn(g); if (k == null) continue; (m[k] = m[k] || {g:0, w:0}); m[k].g++; if (g.result === 'W') m[k].w++; }
+  const keys = order ? order.filter(k => m[k]) : Object.keys(m);
+  return keys.map(k => ({ key:k, g:m[k].g, w:m[k].w, wr:pct(m[k].w, m[k].g) }));
+}
+const hourBucket = g => { const h = new Date(g.ts).getHours(); return h < 6 ? 'Nuit' : h < 12 ? 'Matin' : h < 18 ? 'Après-midi' : h < 23 ? 'Soirée' : 'Nuit'; };
+const HOUR_ORDER = ['Matin','Après-midi','Soirée','Nuit'];
+const HOUR_RANGE = { 'Matin':'6h–12h', 'Après-midi':'12h–18h', 'Soirée':'18h–23h', 'Nuit':'23h–6h' };
+
+function insights(games){
+  const out = [];
+  const all = games.filter(g => g.result !== 'R');
+  const sum = summarize(games);
+  if (all.length < 5){
+    out.push({cls:'', ico:'i-bolt', t:'Enregistre tes games', p:`Il te faut au moins 5 games pour que le coach commence à parler. Chaque game prend 30 secondes à saisir.`});
+    return out;
+  }
+  // humeur
+  const mood = groupWR(all, g => g.mood == null ? null : (g.mood >= 4 ? 'haut' : g.mood <= 2 ? 'bas' : 'moyen'));
+  const mh = mood.find(x => x.key === 'haut'), mb = mood.find(x => x.key === 'bas');
+  if (mh && mb && mh.g >= 4 && mb.g >= 4 && mh.wr - mb.wr >= 12) out.push({cls:'warn', ico:'i-brain', t:`Tu gagnes ${mh.wr} % calme, ${mb.wr} % tilté`, p:`Quand tu commences une session avec une humeur ≤ 2, ton winrate s'effondre. Règle simple : pas de ranked sous 3/5.`});
+  // ordre dans la session
+  const ord = groupWR(all, g => g.n ? (g.n >= 4 ? '4+' : String(g.n)) : null, ['1','2','3','4+']);
+  const late = ord.find(x => x.key === '4+');
+  if (late && late.g >= 5 && sum.wr - late.wr >= 10) out.push({cls:'warn', ico:'i-warn', t:`À partir de la 4e game, ton winrate tombe à ${late.wr} %`, p:`Contre ${sum.wr} % en moyenne. Ton cerveau décroche : limite tes sessions à 3 games ou fais une vraie pause avant la 4e.`});
+  // après défaite
+  const sorted = gamesSorted().filter(g => g.result !== 'R');
+  let al = {g:0,w:0}, aw = {g:0,w:0};
+  for (let i = 1; i < sorted.length; i++){ if (dayKey(sorted[i].ts) !== dayKey(sorted[i-1].ts)) continue; const b = sorted[i-1].result === 'L' ? al : aw; b.g++; if (sorted[i].result === 'W') b.w++; }
+  if (al.g >= 5 && aw.g >= 5 && pct(aw.w, aw.g) - pct(al.w, al.g) >= 12) out.push({cls:'bad', ico:'i-flame', t:`Après une défaite : ${pct(al.w, al.g)} % de victoires (contre ${pct(aw.w, aw.g)} % après une victoire)`, p:`C'est la signature du tilt. Respecte la pause obligatoire après une défaite, même si tu te sens bien.`});
+  // heure
+  const hr = groupWR(all, hourBucket, HOUR_ORDER);
+  const night = hr.find(x => x.key.startsWith('Nuit'));
+  if (night && night.g >= 5 && sum.wr - night.wr >= 10) out.push({cls:'warn', ico:'i-timer', t:`La nuit (23h–6h), ton winrate est de ${night.wr} %`, p:`Contre ${sum.wr} % globalement. Les games après 23h coûtent des LP : joue tes ranked plus tôt, garde la nuit pour les normals.`});
+  // champions
+  const ch = groupWR(all, g => g.champ).filter(x => x.g >= 5).sort((a,b) => b.wr - a.wr);
+  if (ch.length){ const best = ch[0]; out.push({cls:'good', ico:'i-trophy', t:`${champName(best.key)} : ${best.wr} % sur ${best.g} games`, p:`Ton meilleur champion avec assez de games. En tryhard, tu le spams tant que le winrate tient.`});
+    const worst = ch[ch.length-1]; if (worst !== best && worst.wr <= 40) out.push({cls:'bad', ico:'i-warn', t:`${champName(worst.key)} : ${worst.wr} % sur ${worst.g} games`, p:`Sors-le de ton pool ranked le temps de le retravailler en normal.`}); }
+  const distinct = new Set(all.slice(-30).map(g => g.champ)).size;
+  if (all.length >= 15 && distinct >= 8) out.push({cls:'warn', ico:'i-swap', t:`${distinct} champions différents sur tes 30 dernières games`, p:`Un pool trop large freine la montée : 2–3 champions par rôle, et tu les connais par cœur.`});
+  // erreurs
+  const errs = groupWR(all.filter(g => g.result === 'L' && g.err), g => g.err);
+  errs.sort((a,b) => b.g - a.g);
+  if (errs.length && errs[0].g >= 3){ const e = ERR_TAGS.find(x => x.id === errs[0].key); if (e) out.push({cls:'', ico:'i-coach', t:`Ta 1re cause de défaite : ${e.fr} (${errs[0].g} games)`, p:e.tip + ' Va voir la checklist de ton rôle dans l\'onglet Coach.'}); }
+  // CS
+  const withCs = sorted.filter(g => csmin(g) != null);
+  if (withCs.length >= 10){ const last = withCs.slice(-5), prev = withCs.slice(-10, -5); const a = last.reduce((x,g) => x+csmin(g), 0)/5, b = prev.reduce((x,g) => x+csmin(g), 0)/5;
+    if (a - b >= 0.5) out.push({cls:'good', ico:'i-stats', t:`CS/min en hausse : ${a.toFixed(1)} (contre ${b.toFixed(1)})`, p:`Ton farm progresse sur les 5 dernières games. C'est la stat la plus corrélée à la montée.`});
+    else if (b - a >= 0.5) out.push({cls:'warn', ico:'i-stats', t:`CS/min en baisse : ${a.toFixed(1)} (contre ${b.toFixed(1)})`, p:`Retour à l'outil d'entraînement : 5 minutes de last-hit avant chaque session.`}); }
+  // série
+  if (sum.streak.type === 'W' && sum.streak.n >= 3) out.push({cls:'good', ico:'i-flame', t:`Série de ${sum.streak.n} victoires`, p:`C'est là que la greed arrive. Même plan, même calme, même champion.`});
+  if (sum.streak.type === 'L' && sum.streak.n >= 2) out.push({cls:'bad', ico:'i-warn', t:`${sum.streak.n} défaites d'affilée`, p:`Pause. Pas une game de plus tant que tu n'as pas pris 10 minutes et relu ta dernière leçon.`});
+  if (!out.length) out.push({cls:'good', ico:'i-check', t:'Rien d\'alarmant', p:`Continue d'enregistrer : les tendances apparaissent après 20–30 games.`});
+  return out;
+}
+function insightHTML(list){
+  return list.map(i => `<div class="insight ${i.cls}"><div class="ico">${svgUse(i.ico)}</div><div><b>${esc(i.t)}</b><p>${i.p}</p></div></div>`).join('');
+}
+
+/* ---------- graphiques ---------- */
+const tooltip = $('#tooltip');
+function showTip(html, x, y){ tooltip.innerHTML = html; tooltip.style.display = 'block'; const w = tooltip.offsetWidth, h = tooltip.offsetHeight; let lx = x + 14, ly = y + 14; if (lx + w > innerWidth - 8) lx = x - w - 14; if (ly + h > innerHeight - 8) ly = y - h - 14; tooltip.style.left = lx + 'px'; tooltip.style.top = ly + 'px'; }
+function hideTip(){ tooltip.style.display = 'none'; }
+
+function lpChart(el, games, maxPts){
+  const pts = games.slice().sort((a,b) => a.ts - b.ts).filter(g => g.abs != null);
+  const data = (maxPts ? pts.slice(-maxPts) : pts);
+  if (data.length < 2){ el.innerHTML = `<div class="empty"><b>Pas encore de courbe</b>Renseigne ton rang dans les réglages et entre tes LP après chaque game.</div>`; return; }
+  const W = Math.max(320, el.clientWidth || 600), H = 230, L = 62, R = 16, T = 14, B = 28;
+  let mn = Math.min(...data.map(d => d.abs)), mx = Math.max(...data.map(d => d.abs));
+  mn = Math.floor((mn - 15)/25)*25; mx = Math.ceil((mx + 15)/25)*25; if (mx - mn < 100) { mx = mn + 100; }
+  const x = i => L + (W - L - R) * (data.length === 1 ? 0.5 : i/(data.length-1));
+  const y = v => T + (H - T - B) * (1 - (v - mn)/(mx - mn));
+  // ticks : pas de 25 / 50 / 100 / 200 LP selon l'étendue, étiquetés avec la division
+  const range = mx - mn; const step = range <= 125 ? 25 : range <= 300 ? 50 : range <= 700 ? 100 : 200;
+  let ticks = []; for (let v = Math.ceil(mn/step)*step; v <= mx; v += step) ticks.push(v);
+  const tickLabel = v => { if (v >= 2800) return 'Maître+ ' + (v-2800); const lp = v % 100; return absToLabel(v) + (lp ? ' · ' + lp : ''); };
+  const line = data.map((d, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(d.abs).toFixed(1)).join(' ');
+  const area = line + ` L${x(data.length-1).toFixed(1)} ${(H-B).toFixed(1)} L${x(0).toFixed(1)} ${(H-B).toFixed(1)} Z`;
+  const sameDay = data[data.length-1].ts - data[0].ts < 2*86400000;
+  const xLabel = d => sameDay ? new Date(d.ts).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : fmtDate(d.ts);
+  const xt = []; const nx = Math.min(6, data.length); for (let i = 0; i < nx; i++){ const idx = Math.round(i*(data.length-1)/(nx-1 || 1)); xt.push(idx); }
+  el.innerHTML = `<svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Courbe de LP">
+    <g class="grid">${ticks.map(v => `<line x1="${L}" x2="${W-R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>`).join('')}</g>
+    ${ticks.map(v => `<text x="${L-6}" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${esc(tickLabel(v))}</text>`).join('')}
+    <line class="axis" x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}"/>
+    ${[...new Set(xt)].map(i => `<text x="${x(i).toFixed(1)}" y="${H-8}" text-anchor="middle">${esc(xLabel(data[i]))}</text>`).join('')}
+    <path class="area" d="${area}"/>
+    <path class="line" d="${line}"/>
+    <line class="cross" id="lpCross" x1="0" x2="0" y1="${T}" y2="${H-B}" style="display:none"/>
+    ${data.map((d, i) => `<circle class="dot" cx="${x(i).toFixed(1)}" cy="${y(d.abs).toFixed(1)}" r="${data.length > 40 ? 2.5 : 4}"/>`).join('')}
+    ${data.map((d, i) => { const x0 = i ? (x(i-1)+x(i))/2 : L, x1 = i < data.length-1 ? (x(i)+x(i+1))/2 : W-R; return `<rect class="hit" data-i="${i}" x="${x0.toFixed(1)}" y="${T}" width="${(x1-x0).toFixed(1)}" height="${H-T-B}"/>`; }).join('')}
+  </svg>`;
+  const svg = el.firstElementChild, cross = $('#lpCross', svg);
+  svg.addEventListener('mousemove', e => {
+    const r = e.target.closest('.hit'); if (!r){ hideTip(); cross.style.display = 'none'; return; }
+    const d = data[+r.dataset.i]; const i = +r.dataset.i;
+    cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.style.display = '';
+    showTip(`<b>${esc(champName(d.champ))} · ${d.result === 'W' ? 'Victoire' : d.result === 'L' ? 'Défaite' : 'Remake'}</b>${esc(absToLabel(d.abs))} · ${d.abs >= 2800 ? '' : (d.abs % 100) + ' LP'} (${d.lp > 0 ? '+' : ''}${d.lp ?? '?'})<br><span class="muted">${esc(fmtDateTime(d.ts))}</span>`, e.clientX, e.clientY);
+  });
+  svg.addEventListener('mouseleave', () => { hideTip(); cross.style.display = 'none'; });
+}
+
+function hbars(el, rows, opts={}){
+  if (!rows.length){ el.innerHTML = `<div class="empty">${esc(opts.empty || 'Pas assez de données')}</div>`; return; }
+  const max = opts.max || Math.max(...rows.map(r => r.value), 1);
+  el.innerHTML = rows.map(r => `<div class="hbar" title="${esc(r.title||'')}">
+    <div class="name">${r.icon || ''}<span>${esc(r.label)}</span></div>
+    <div class="track"><div class="fill ${r.cls||''}" style="width:${Math.max(2, 100*r.value/max).toFixed(1)}%"></div></div>
+    <div class="val">${esc(r.text)}</div></div>`).join('');
+}
+const wrRows = (groups, labelFn, iconFn) => groups.map(g => ({ label: labelFn ? labelFn(g.key) : g.key, icon: iconFn ? iconFn(g.key) : '', value: g.wr, text: `${g.wr} % (${g.g})`, cls: g.wr >= 50 ? 'win' : 'loss', title: `${g.w} V / ${g.g - g.w} D` }));
+
+/* ---------- ACCUEIL ---------- */
+function tilesHTML(sum, extra){
+  const t = [];
+  t.push({l:'Winrate', v: sum.n ? sum.wr + ' %' : '—', d: sum.n ? `${sum.w} V · ${sum.l} D` : 'aucune game'});
+  const stk = sum.streak;
+  t.push({l:'Série', v: stk.type ? (stk.type === 'W' ? 'V' : 'D') + stk.n : '—', d: stk.type === 'W' ? (stk.n >= 3 ? 'en feu' : 'victoire' + (stk.n > 1 ? 's' : '')) : stk.type === 'L' ? (stk.n >= 2 ? 'pause !' : 'défaite') : '', cls: stk.type === 'W' ? 'up' : stk.type === 'L' ? 'down' : ''});
+  t.push({l:'KDA', v: sum.n ? sum.kda.toFixed(2) : '—', d: sum.n ? `${(sum.k/sum.n).toFixed(1)} / ${(sum.d/sum.n).toFixed(1)} / ${(sum.a/sum.n).toFixed(1)}` : ''});
+  t.push({l:'CS / min', v: sum.cs != null ? sum.cs.toFixed(1) : '—', d: sum.cs != null ? (sum.cs >= 7 ? 'objectif atteint' : 'objectif : 7+') : 'renseigne CS + durée'});
+  t.push({l:'Vision / min', v: sum.vis != null ? sum.vis.toFixed(2) : '—', d: sum.vis != null ? (sum.vis >= 1 ? 'bien' : 'objectif : 1+') : ''});
+  t.push({l:'LP net', v: (sum.lp > 0 ? '+' : '') + sum.lp, d: sum.lpAvg != null ? `${sum.lpAvg > 0 ? '+' : ''}${sum.lpAvg.toFixed(1)} / game` : 'entre tes LP', cls: sum.lp > 0 ? 'up' : sum.lp < 0 ? 'down' : ''});
+  if (extra) t.push(...extra);
+  return t.map(x => `<div class="tile"><div class="label">${esc(x.l)}</div><div class="value">${esc(x.v)}</div><div class="delta ${x.cls||''}">${esc(x.d||'')}</div></div>`).join('');
+}
+function goalInfo(){
+  const cur = rankAbs(S.rank), goal = rankAbs(S.goal);
+  if (cur == null || goal == null) return null;
+  const sum = summarize(gamesSorted().slice(-30));
+  const dist = goal - cur;
+  const gain = S.goal.gain || (sum.lpAvg != null && sum.n >= 8 ? sum.lpAvg : null);
+  return { cur, goal, dist, gain, sum };
+}
+function renderHome(){
+  const hello = S.profile.name ? `Salut ${S.profile.name}` : 'Bienvenue';
+  $('#heroHello').textContent = hello;
+  $('#heroEmblem').innerHTML = emblemSVG(S.rank.tier, S.rank.div);
+  $('#heroRank').textContent = rankLabel(S.rank);
+  $('#heroLp').textContent = S.rank.tier ? `${S.rank.lp||0} LP` : 'Définis ton rang dans les réglages pour commencer à grimper.';
+  const gi = goalInfo();
+  if (gi && gi.dist > 0){
+    const startAbs = Math.max(0, gi.goal - Math.max(gi.dist, 400));
+    const progress = clamp(100 * (gi.cur - startAbs) / (gi.goal - startAbs), 2, 100);
+    $('#goalLabel').textContent = `Objectif : ${rankLabel(S.goal)} · ${gi.dist} LP à gagner`;
+    $('#goalProgress').firstElementChild.style.width = progress + '%';
+    $('#goalEta').textContent = gi.gain == null ? 'Entre tes LP sur 8 games pour estimer le nombre de games restantes.' : gi.gain <= 0 ? `Sur tes 30 dernières games tu perds des LP en moyenne (${gi.gain.toFixed(1)}/game) : avant de viser plus haut, stabilise le winrate.` : `≈ ${Math.ceil(gi.dist / gi.gain)} games à ce rythme (${gi.gain > 0 ? '+' : ''}${gi.gain.toFixed(1)} LP/game en moyenne).`;
+  } else if (gi && gi.dist <= 0){
+    $('#goalLabel').textContent = `Objectif ${rankLabel(S.goal)} atteint. Fixe le suivant dans les réglages.`;
+    $('#goalProgress').firstElementChild.style.width = '100%'; $('#goalEta').textContent = '';
+  } else {
+    $('#goalLabel').textContent = S.rank.tier ? 'Fixe un objectif de saison dans les réglages.' : ''; $('#goalProgress').firstElementChild.style.width = '0%'; $('#goalEta').textContent = '';
+  }
+  const last20 = gamesSorted().slice(-20);
+  const sum = summarize(last20);
+  const todayGames = S.games.filter(g => dayKey(g.ts) === dayKey(Date.now()));
+  $('#homeTiles').innerHTML = tilesHTML(sum);
+  $('#homePeriod').textContent = last20.length ? `${last20.length} dernières games` : 'aucune game enregistrée';
+  lpChart($('#lpChartHome'), S.games, 30);
+  const withLp = S.games.filter(g => g.lp != null).length;
+  $('#lpChartNote').textContent = S.games.length && withLp < S.games.length ? `${S.games.length - withLp} game(s) sans LP renseignés` : '';
+  $('#homeInsights').innerHTML = insightHTML(insights(gamesSorted()).slice(0, 3));
+  $('#todayDate').textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+  // jours consécutifs
+  const days = new Set(S.games.map(g => dayKey(g.ts))); let run = 0; const d = new Date();
+  if (!days.has(dayKey(d.getTime()))) d.setDate(d.getDate()-1);
+  while (days.has(dayKey(d.getTime()))){ run++; d.setDate(d.getDate()-1); }
+  const ts = summarize(todayGames);
+  $('#todayBox').innerHTML = `
+    <div class="tiles" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="tile"><div class="label">Games</div><div class="value">${ts.n}</div><div class="delta">${ts.n ? ts.w + ' V · ' + ts.l + ' D' : 'aujourd\'hui'}</div></div>
+      <div class="tile"><div class="label">LP du jour</div><div class="value">${ts.lp > 0 ? '+' : ''}${ts.lp}</div><div class="delta"></div></div>
+      <div class="tile"><div class="label">Jours d'affilée</div><div class="value">${run}</div><div class="delta">${run >= 3 ? 'régularité' : ''}</div></div>
+    </div>
+    <p class="small" style="margin-top:10px">${S.session ? `<span class="badge teal">Session en cours</span> ${esc(S.session.goal)}` : (ts.n >= 5 ? 'Tu as fait tes games du jour. Une review vaut plus qu\'une 6e ranked.' : 'Pas de session en cours. Un objectif, un échauffement, 3 games max.')}</p>`;
+  // Worlds
+  const now = Date.now(), w0 = new Date('2026-10-15T00:00:00').getTime(), w1 = new Date('2026-11-15T00:00:00').getTime();
+  const dd = Math.ceil((w0 - now)/86400000);
+  $('#worldsBox').innerHTML = now < w0 ? `${svgUse('i-trophy', 14)} Worlds 2026 dans <b>${dd} jour${dd > 1 ? 's' : ''}</b> (15 oct. → 14 nov., finale au Barclays Center, New York).` : now < w1 ? `${svgUse('i-trophy', 14)} <b>Worlds 2026 en cours</b> — finale le 14 novembre à New York.` : `${svgUse('i-trophy', 14)} Worlds 2026 terminés. Prochaine saison : janvier 2027.`;
+}
+
+/* ---------- SESSION ---------- */
+let form = { champ:null, role:null, result:null, tilt:null, err:null };
+let setup = { goal:null, mood:null, checks:{} };
+function coachPreMessage(){
+  const g = gamesSorted().filter(x => x.result !== 'R'); if (!g.length) return 'Première session : le seul objectif, c\'est d\'enregistrer tes games honnêtement.';
+  const st = streak(g);
+  const lastDay = g.filter(x => dayKey(x.ts) === dayKey(Date.now()));
+  if (st.type === 'L' && st.n >= 3) return `Tu sors de ${st.n} défaites d'affilée. Objectif conseillé : « 0 mort avant 10 min » et un champion confort.`;
+  if (st.type === 'W' && st.n >= 3) return `Série de ${st.n} victoires. Même champion, même plan — la greed arrive maintenant.`;
+  if (lastDay.length >= 5) return `Déjà ${lastDay.length} games aujourd'hui. Es-tu sûr que la suivante sera meilleure que la précédente ?`;
+  const last = g[g.length-1]; if (last.lesson) return `Ta dernière leçon : « ${last.lesson} ». Ça devient ton focus de la session.`;
+  return 'Choisis UN objectif mesurable. Tu ne peux pas tout corriger, tu peux corriger une chose.';
+}
+function renderSessionSetup(){
+  $('#pregameChecks').innerHTML = PREGAME_CHECKS.map((c, i) => `<label class="check ${setup.checks[i] ? 'done' : ''}"><input type="checkbox" data-i="${i}" ${setup.checks[i] ? 'checked' : ''}><span>${esc(c)}</span></label>`).join('');
+  $$('#pregameChecks input').forEach(cb => cb.addEventListener('change', () => { setup.checks[cb.dataset.i] = cb.checked; cb.closest('.check').classList.toggle('done', cb.checked); }));
+  $('#goalChips').innerHTML = GOALS.map(g => `<span class="chip ${setup.goal === g ? 'on' : ''}" data-v="${esc(g)}">${esc(g)}</span>`).join('');
+  $$('#goalChips .chip').forEach(c => c.addEventListener('click', () => { setup.goal = c.dataset.v; $('#goalCustom').value = ''; $$('#goalChips .chip').forEach(x => x.classList.toggle('on', x === c)); }));
+  $('#moodScale').innerHTML = [1,2,3,4,5].map(n => `<button type="button" class="${setup.mood === n ? 'on' : ''}" data-v="${n}">${n}</button>`).join('');
+  $$('#moodScale button').forEach(b => b.addEventListener('click', () => { setup.mood = +b.dataset.v; $$('#moodScale button').forEach(x => x.classList.toggle('on', x === b)); }));
+  $('#coachPreMsg').textContent = coachPreMessage();
+  renderWarmup();
+}
+function startSession(){
+  const custom = $('#goalCustom').value.trim();
+  const goal = custom || setup.goal;
+  if (!goal){ toast('Choisis un objectif de session'); return; }
+  if (!setup.mood){ toast('Note ton humeur (1–5) avant de jouer'); return; }
+  if (setup.mood <= 2 && !confirm('Humeur ≤ 2 : le coach te déconseille la ranked. Tu lances quand même ?')) return;
+  S.session = { id: uid(), start: Date.now(), goal, mood: setup.mood, max: clamp(+$('#maxGames').value || 5, 1, 15), stopAfter: +$('#stopAfter').value || 2, games: [], lp: 0 };
+  save(); renderSession(); toast('Session lancée. Bonne game.');
+}
+function endSession(){
+  const s = S.session; if (!s) return;
+  const games = S.games.filter(g => g.session === s.id);
+  const sum = summarize(games);
+  $('#summaryBody').innerHTML = `<div class="tiles" style="grid-template-columns:1fr 1fr 1fr">
+    <div class="tile"><div class="label">Games</div><div class="value">${sum.n}</div><div class="delta">${sum.w} V · ${sum.l} D</div></div>
+    <div class="tile"><div class="label">LP net</div><div class="value">${sum.lp > 0 ? '+' : ''}${sum.lp}</div><div class="delta"></div></div>
+    <div class="tile"><div class="label">Durée</div><div class="value">${Math.round((Date.now()-s.start)/60000)} min</div><div class="delta"></div></div></div>
+    <p class="small" style="margin-top:10px"><b>Objectif :</b> ${esc(s.goal)}</p>
+    ${games.filter(g => g.lesson).length ? `<p class="small"><b>Leçons :</b></p><ul class="clean small">${games.filter(g => g.lesson).map(g => `<li>${esc(g.lesson)}</li>`).join('')}</ul>` : ''}`;
+  let goalScore = null;
+  $$('#summaryGoal .chip').forEach(c => { c.classList.remove('on'); c.onclick = () => { goalScore = +c.dataset.v; $$('#summaryGoal .chip').forEach(x => x.classList.toggle('on', x === c)); }; });
+  $('#summaryNote').value = '';
+  $('#summaryModal').classList.add('open');
+  $('#summaryClose').onclick = () => {
+    S.sessions.push({ id:s.id, start:s.start, end:Date.now(), goal:s.goal, mood:s.mood, n:sum.n, w:sum.w, lp:sum.lp, goalScore, note:$('#summaryNote').value.trim() });
+    S.session = null; save(); $('#summaryModal').classList.remove('open'); renderSession(); toast('Session enregistrée');
+  };
+}
+function renderSession(){
+  const live = !!S.session;
+  $('#sessionSetup').classList.toggle('hidden', live);
+  $('#sessionLive').classList.toggle('hidden', !live);
+  if (!live) renderSessionSetup(); else renderSessionLive();
+  renderHistory();
+}
+function renderSessionLive(){
+  const s = S.session;
+  $('#liveGoal').textContent = s.goal;
+  $('#liveTime').textContent = mmss((Date.now() - s.start)/1000);
+  const games = S.games.filter(g => g.session === s.id).sort((a,b) => a.ts - b.ts);
+  $('#liveDots').innerHTML = games.map(g => `<span class="${g.result}">${g.result === 'W' ? 'V' : g.result === 'L' ? 'D' : 'R'}</span>`).join('') || '<span class="tiny muted">aucune</span>';
+  const lp = games.reduce((a,g) => a+(g.lp||0), 0); $('#liveLp').textContent = (lp > 0 ? '+' : '') + lp;
+  // rôle par défaut
+  if (!form.role) form.role = S.profile.mainRole || 'MID';
+  $('#roleChips').innerHTML = ROLES.map(r => `<span class="chip ${form.role === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#roleChips .chip').forEach(c => c.addEventListener('click', () => { form.role = c.dataset.v; $$('#roleChips .chip').forEach(x => x.classList.toggle('on', x === c)); renderRecentChamps(); }));
+  $$('#resultChips .chip').forEach(c => { c.classList.toggle('on', form.result === c.dataset.v); c.onclick = () => { form.result = c.dataset.v; $$('#resultChips .chip').forEach(x => x.classList.toggle('on', x === c)); }; });
+  $('#tiltScale').innerHTML = [1,2,3,4,5].map(n => `<button type="button" class="${form.tilt === n ? 'on' : ''}" data-v="${n}">${n}</button>`).join('');
+  $$('#tiltScale button').forEach(b => b.addEventListener('click', () => { form.tilt = +b.dataset.v; $$('#tiltScale button').forEach(x => x.classList.toggle('on', x === b)); }));
+  $('#errChips').innerHTML = ERR_TAGS.map(e => `<span class="chip ${form.err === e.id ? 'on' : ''}" data-v="${e.id}" title="${esc(e.tip)}">${esc(e.fr)}</span>`).join('');
+  $$('#errChips .chip').forEach(c => c.addEventListener('click', () => { form.err = form.err === c.dataset.v ? null : c.dataset.v; $$('#errChips .chip').forEach(x => x.classList.toggle('on', x.dataset.v === form.err)); }));
+  renderRecentChamps(); renderChampSelected();
+  $('#sessionGames').innerHTML = games.length ? games.slice().reverse().map(gameHTML).join('') : '<div class="empty">Aucune game pour l\'instant. Va jouer.</div>';
+  bindGameDelete($('#sessionGames'));
+  $('#stopRulesBox').innerHTML = `<li><b>${s.stopAfter} défaite${s.stopAfter > 1 ? 's d\'affilée' : ''}</b> → pause respiration 2 min (obligatoire).</li><li><b>3 défaites d'affilée</b> → fin de session, quoi qu'il arrive.</li><li><b>${s.max} games max</b> → on termine, même sur une victoire.</li><li><b>Tilt ≥ 4 après une game</b> → pause avant la suivante.</li>`;
+  const st = streak(games.filter(g => g.result !== 'R'));
+  let msg = '';
+  if (games.length >= s.max) msg = `<div class="insight warn"><div class="ico">${svgUse('i-warn')}</div><div><b>${games.length} games : ton quota est atteint</b><p>Termine la session. Les LP se gagnent aussi en sachant s'arrêter.</p></div></div>`;
+  else if (st.type === 'L' && st.n >= 3) msg = `<div class="insight bad"><div class="ico">${svgUse('i-flame')}</div><div><b>3 défaites d'affilée</b><p>Le coach termine la session pour toi. On y revient demain avec une review.</p></div></div>`;
+  else if (st.type === 'L' && st.n >= s.stopAfter) msg = `<div class="insight warn"><div class="ico">${svgUse('i-brain')}</div><div><b>Pause obligatoire avant la prochaine game</b><p>Respiration 2 min, on se lève, on relit l'objectif : « ${esc(s.goal)} ».</p></div></div>`;
+  else if (st.type === 'W' && st.n >= 3) msg = `<div class="insight good"><div class="ico">${svgUse('i-flame')}</div><div><b>Série de ${st.n} victoires</b><p>Même champion, même plan. C'est maintenant que la greed fait perdre.</p></div></div>`;
+  else msg = `<div class="insight"><div class="ico">${svgUse('i-coach')}</div><div><b>Focus : ${esc(s.goal)}</b><p>Une seule chose à réussir cette game. Le reste, c'est du bonus.</p></div></div>`;
+  $('#liveCoach').innerHTML = msg;
+}
+function renderRecentChamps(){
+  const recent = []; for (const g of gamesSorted().reverse()){ if (!recent.includes(g.champ)) recent.push(g.champ); if (recent.length >= 6) break; }
+  const pool = (S.pool[form.role] || []).map(p => p.champ).filter(Boolean);
+  const list = [...new Set([...pool, ...recent])].slice(0, 10);
+  $('#recentChamps').innerHTML = list.map(id => `<span class="rc" data-id="${id}" style="cursor:pointer">${champIcon(id)}</span>`).join('');
+  $$('#recentChamps .rc').forEach(i => i.addEventListener('click', () => { form.champ = i.dataset.id; renderChampSelected(); }));
+}
+function renderChampSelected(){
+  const el = $('#champSelected');
+  if (!form.champ){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden'); el.innerHTML = `${champIcon(form.champ)}<b>${esc(champName(form.champ))}</b><button class="btn xs ghost" type="button" id="champClear">changer</button>`;
+  $('#champClear').onclick = () => { form.champ = null; renderChampSelected(); $('#champInput').focus(); };
+}
+function setupChampPicker(){
+  const input = $('#champInput'), list = $('#champList'); let hl = 0, items = [];
+  const show = () => { items = findChamps(input.value); hl = 0; list.innerHTML = items.map((c, i) => `<button type="button" class="${i === hl ? 'hl' : ''}" data-id="${c[0]}">${champIcon(c[0], 'sm')}<span>${esc(c[1])}</span></button>`).join(''); list.classList.toggle('hidden', !items.length); };
+  const pick = id => { form.champ = id; input.value = ''; list.classList.add('hidden'); renderChampSelected(); };
+  input.addEventListener('input', show);
+  input.addEventListener('focus', show);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown'){ hl = Math.min(items.length-1, hl+1); $$('button', list).forEach((b, i) => b.classList.toggle('hl', i === hl)); e.preventDefault(); }
+    else if (e.key === 'ArrowUp'){ hl = Math.max(0, hl-1); $$('button', list).forEach((b, i) => b.classList.toggle('hl', i === hl)); e.preventDefault(); }
+    else if (e.key === 'Enter'){ if (items[hl]) pick(items[hl][0]); e.preventDefault(); }
+    else if (e.key === 'Escape'){ list.classList.add('hidden'); }
+  });
+  list.addEventListener('mousedown', e => { const b = e.target.closest('button'); if (b){ e.preventDefault(); pick(b.dataset.id); } });
+  document.addEventListener('click', e => { if (!e.target.closest('.champ-pick')) list.classList.add('hidden'); });
+}
+function saveGame(){
+  const s = S.session; if (!s) return;
+  if (!form.champ){ toast('Choisis ton champion'); return; }
+  if (!form.result){ toast('Victoire ou défaite ?'); return; }
+  const num = id => { const v = $(id).value.trim(); return v === '' ? null : +v; };
+  const lp = num('#gLp');
+  const g = { id: uid(), ts: Date.now(), session: s.id, n: S.games.filter(x => x.session === s.id).length + 1, champ: form.champ, role: form.role, result: form.result,
+    k: num('#gK'), d: num('#gD'), a: num('#gA'), dur: num('#gDur'), cs: num('#gCs'), vis: num('#gVis'), lp: form.result === 'R' ? 0 : lp, mood: s.mood, tilt: form.tilt, err: form.err, lesson: $('#gLesson').value.trim() };
+  const labelBefore = rankLabel(S.rank), absBefore = rankAbs(S.rank);
+  if (g.lp) applyLp(g.lp);
+  g.abs = rankAbs(S.rank);
+  const rankMsg = labelBefore !== rankLabel(S.rank) ? ((g.abs > absBefore ? 'PROMOTION : ' : 'Rétrogradation : ') + rankLabel(S.rank)) : null;
+  S.games.push(g); save();
+  // reset formulaire
+  ['#gK','#gD','#gA','#gDur','#gCs','#gVis','#gLp','#gLesson'].forEach(id => $(id).value = '');
+  const keepChamp = form.champ; form = { champ: keepChamp, role: form.role, result:null, tilt:null, err:null };
+  renderRankChip(); renderSession();
+  const games = S.games.filter(x => x.session === s.id).filter(x => x.result !== 'R');
+  const st = streak(games);
+  if (st.type === 'L' && st.n >= 3) openPause('stop');
+  else if (st.type === 'L' && st.n >= s.stopAfter) openPause('pause');
+  else if (g.tilt >= 4) openPause('tilt');
+  else if (games.length >= s.max) toast('Quota de games atteint : termine la session.');
+  else toast(rankMsg || (g.result === 'W' ? 'GG. Même plan pour la suivante.' : 'Noté. Une leçon, pas une excuse.'));
+}
+function gameHTML(g){
+  const tag = ERR_TAGS.find(e => e.id === g.err);
+  const cs = csmin(g);
+  return `<div class="game ${g.result}" data-id="${g.id}">
+    ${champIcon(g.champ)}
+    <div><div><span class="res">${g.result === 'W' ? 'VICTOIRE' : g.result === 'L' ? 'DÉFAITE' : 'REMAKE'}</span> <b>${esc(champName(g.champ))}</b> <span class="tiny muted">${esc((ROLES.find(r => r.id === g.role)||{}).fr || '')} · ${esc(fmtDateTime(g.ts))}</span></div>
+      <div class="meta">${g.k != null ? `${g.k}/${g.d ?? 0}/${g.a ?? 0} · KDA ${kda(g).toFixed(1)}` : ''}${cs != null ? ` · ${cs.toFixed(1)} CS/min` : ''}${g.vis != null && g.dur ? ` · ${(g.vis/g.dur).toFixed(1)} vision/min` : ''}${g.tilt ? ` · tilt ${g.tilt}/5` : ''} ${tag ? `<span class="tag">${esc(tag.fr)}</span>` : ''}</div>
+      ${g.lesson ? `<div class="lesson">« ${esc(g.lesson)} »</div>` : ''}</div>
+    <div style="text-align:right"><div class="lp ${g.lp > 0 ? '' : ''}">${g.lp != null ? (g.lp > 0 ? '+' : '') + g.lp + ' LP' : ''}</div><button class="btn xs ghost del" title="Supprimer" aria-label="Supprimer">${svgUse('i-trash', 14)}</button></div></div>`;
+}
+function bindGameDelete(el){
+  $$('.del', el).forEach(b => b.addEventListener('click', () => {
+    const id = b.closest('.game').dataset.id; const g = S.games.find(x => x.id === id); if (!g) return;
+    if (!confirm(`Supprimer cette game (${champName(g.champ)}) ?`)) return;
+    if (g.lp) applyLp(-g.lp);
+    S.games = S.games.filter(x => x.id !== id); save(); renderRankChip(); renderSession(); if (currentView === 'home') renderHome();
+  }));
+}
+function renderHistory(){
+  const games = gamesSorted().reverse().slice(0, 15);
+  $('#historyGames').innerHTML = games.length ? games.map(gameHTML).join('') : '<div class="empty"><b>Historique vide</b>Tes games apparaîtront ici. Objectif : 100 games enregistrées avant la fin du split.</div>';
+  bindGameDelete($('#historyGames'));
+}
+
+/* ---------- pause / respiration ---------- */
+let breath = { timer:null, phase:0, left:120 };
+function openPause(mode){
+  const m = $('#breathModal');
+  $('#breathBadge').textContent = mode === 'stop' ? 'Fin de session' : mode === 'tilt' ? 'Tilt détecté' : mode === 'manual' ? 'Respiration' : 'Pause obligatoire';
+  $('#breathBadge').className = 'badge ' + (mode === 'stop' ? 'loss' : mode === 'manual' ? 'teal' : 'warn');
+  $('#breathTitle').textContent = mode === 'stop' ? 'Trois défaites d\'affilée : on arrête là' : mode === 'tilt' ? 'Ton tilt est haut. On respire.' : mode === 'manual' ? 'Deux minutes pour redescendre' : 'Respire avant la prochaine game';
+  $('#breathSub').textContent = mode === 'stop' ? 'La 4e game après 3 défaites est statistiquement la pire de la journée. Respire 2 minutes, note ta leçon, et on se revoit demain.' : 'Respiration carrée 4-4-4-4 pendant deux minutes. Le tilt se joue ici, pas dans le chat.';
+  $('#breathStop').classList.toggle('hidden', mode === 'manual' && !S.session);
+  $('#pauseChecks').innerHTML = PAUSE_CHECKS.map(c => `<label class="check"><input type="checkbox"><span>${esc(c)}</span></label>`).join('');
+  $('#breathClose').classList.toggle('hidden', mode === 'stop');
+  stopBreath(); $('#breathTxt').textContent = 'Prêt ?'; $('#breathTimer').textContent = '2:00';
+  m.classList.add('open');
+}
+function startBreath(){
+  stopBreath(); breath.left = 120; breath.phase = 0;
+  const ring = $('#breathRing'), txt = $('#breathTxt');
+  const phases = [['Inspire','in'],['Bloque','in hold'],['Expire',''],['Bloque','hold']];
+  const step = () => { const p = phases[breath.phase % 4]; txt.textContent = p[0]; ring.className = 'ring ' + p[1]; breath.phase++; };
+  step();
+  breath.timer = setInterval(() => { breath.left--; $('#breathTimer').textContent = mmss(breath.left); if (breath.left % 4 === 0) step(); if (breath.left <= 0){ stopBreath(); txt.textContent = 'Bien.'; beep(2); } }, 1000);
+}
+function stopBreath(){ if (breath.timer) clearInterval(breath.timer); breath.timer = null; $('#breathRing').className = 'ring'; }
+
+/* ---------- STATS ---------- */
+let statsFilter = { days: 7, role: '' };
+function filteredGames(){
+  const since = statsFilter.days ? Date.now() - statsFilter.days*86400000 : 0;
+  return gamesSorted().filter(g => g.ts >= since && (!statsFilter.role || g.role === statsFilter.role));
+}
+function renderStats(){
+  $$('#statsPeriod .chip').forEach(c => { c.classList.toggle('on', +c.dataset.v === statsFilter.days); c.onclick = () => { statsFilter.days = +c.dataset.v; renderStats(); }; });
+  $('#statsRole').innerHTML = `<span class="chip ${!statsFilter.role ? 'on' : ''}" data-v="">Tous les rôles</span>` + ROLES.map(r => `<span class="chip ${statsFilter.role === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#statsRole .chip').forEach(c => c.onclick = () => { statsFilter.role = c.dataset.v; renderStats(); });
+  const games = filteredGames();
+  const sum = summarize(games);
+  $('#statsTiles').innerHTML = tilesHTML(sum);
+  lpChart($('#lpChartStats'), games, 0);
+  const champs = groupWR(games, g => g.champ).sort((a,b) => b.g - a.g || b.wr - a.wr).slice(0, 10);
+  hbars($('#champBars'), wrRows(champs, champName, id => champIcon(id, 'sm')), {max:100, empty:'Aucune game sur la période'});
+  const errs = groupWR(games.filter(g => g.err), g => g.err).sort((a,b) => b.g - a.g);
+  hbars($('#errBars'), errs.map(e => { const t = ERR_TAGS.find(x => x.id === e.key) || {fr:e.key}; return { label:t.fr, value:e.g, text:`${e.g} game${e.g > 1 ? 's' : ''}`, cls:'loss', title:t.tip }; }), {empty:'Tague ton erreur principale à chaque game'});
+  hbars($('#moodBars'), wrRows(groupWR(games, g => g.mood ? String(g.mood) : null, ['1','2','3','4','5']), k => 'Humeur ' + k + '/5'), {max:100});
+  hbars($('#orderBars'), wrRows(groupWR(games, g => g.n ? (g.n >= 5 ? '5+' : String(g.n)) : null, ['1','2','3','4','5+']), k => 'Game n° ' + k), {max:100});
+  hbars($('#hourBars'), wrRows(groupWR(games, hourBucket, HOUR_ORDER), k => `${k} (${HOUR_RANGE[k]})`), {max:100});
+  hbars($('#roleBars'), wrRows(groupWR(games, g => g.role, ROLES.map(r => r.id)), k => (ROLES.find(r => r.id === k)||{}).fr || k), {max:100});
+  $('#statsInsights').innerHTML = insightHTML(insights(games));
+}
+
+/* ============================================================
+   CLIMB — outils in-game, coach, musique, réglages, init
+   ============================================================ */
+
+/* ---------- audio ---------- */
+let audioCtx = null;
+function beep(n=1){
+  if (!S.settings.sound) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < n; i++){
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = i % 2 ? 1175 : 880;
+      g.gain.value = 0.0001; o.connect(g); g.connect(audioCtx.destination);
+      const t = audioCtx.currentTime + i*0.18;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t+0.15);
+      o.start(t); o.stop(t+0.16);
+    }
+  } catch(e){}
+}
+
+/* ---------- chrono de game ---------- */
+function gameSeconds(){ const c = S.clock; return c.offset + (c.running ? (Date.now() - c.startedAt)/1000 : 0); }
+function clockToggle(){
+  const c = S.clock;
+  if (c.running){ c.offset = gameSeconds(); c.running = false; }
+  else { c.startedAt = Date.now(); c.running = true; }
+  save(); renderClock();
+}
+function clockReset(){ S.clock = { running:false, startedAt:0, offset:0 }; S.obj = null; S.spells = null; save(); renderClock(); renderSpells(); renderObjectives(); }
+function clockSync(){
+  const v = $('#clockSync').value.trim(); const m = v.match(/^(\d{1,3})[:h.](\d{1,2})$/);
+  if (!m){ toast('Format attendu : mm:ss'); return; }
+  const secs = (+m[1])*60 + (+m[2]);
+  S.clock.offset = secs; S.clock.startedAt = Date.now(); S.clock.running = true; save(); renderClock(); $('#clockSync').value = ''; toast('Chrono synchronisé à ' + mmss(secs));
+}
+function renderClock(){
+  $('#gameTime').textContent = mmss(gameSeconds()).padStart(5, '0');
+  $('#clockToggle').innerHTML = S.clock.running ? 'Pause' : `${svgUse('i-play')} Démarrer`;
+}
+
+/* ---------- tracker de sorts ---------- */
+const LANES = [['TOP','Top'],['JGL','Jungle'],['MID','Mid'],['ADC','ADC'],['SUP','Support']];
+function defaultSpells(){ return LANES.map(l => ({ lane:l[0], s2: l[0] === 'JGL' ? 'SMI' : l[0] === 'TOP' ? 'TP' : l[0] === 'ADC' ? 'HEAL' : 'IGN', f:null, s:null })); }
+function haste(){ return (S.haste.lucidity ? 10 : 0) + (S.haste.cosmic ? 18 : 0); }
+function spellCd(id){ const sp = SPELLS.find(x => x.id === id) || SPELLS[0]; return sp.cd / (1 + haste()/100); }
+function toggleSpell(i, slot){
+  S.spells = S.spells || defaultSpells();
+  const row = S.spells[i]; const id = slot === 'f' ? 'F' : row.s2;
+  if (row[slot] && row[slot] > Date.now()){ row[slot] = null; save(); renderSpells(); return; }
+  const cd = spellCd(id);
+  row[slot] = Date.now() + cd*1000; save(); renderSpells();
+  const spName = slot === 'f' ? 'flash' : (SPELLS.find(x => x.id === id)||{}).fr.toLowerCase();
+  const laneName = LANES[i][1].toLowerCase();
+  if (S.clock.running || S.clock.offset){
+    const txt = `${laneName} ${spName} ${mmss(gameSeconds() + cd)}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast('Copié : ' + txt)).catch(() => toast(txt));
+    else toast(txt);
+  } else toast(`${laneName} ${spName} : retour dans ${mmss(cd)} (lance le chrono pour l'heure de jeu)`);
+}
+function renderSpells(){
+  S.spells = S.spells || defaultSpells();
+  const el = $('#spellRows'); const now = Date.now();
+  el.innerHTML = S.spells.map((r, i) => {
+    const cell = (slot) => {
+      const id = slot === 'f' ? 'F' : r.s2; const sp = SPELLS.find(x => x.id === id) || SPELLS[0];
+      const left = r[slot] ? (r[slot] - now)/1000 : null;
+      const cls = left == null ? (r[slot] && now - r[slot] < 15000 ? 'ready' : '') : left <= 0 ? 'ready' : left <= 30 ? 'soon' : 'running';
+      const label = left == null || left <= 0 ? (r[slot] && now - r[slot] < 15000 ? 'UP !' : mmss(spellCd(id))) : mmss(left);
+      const head = slot === 's' ? `<select data-i="${i}" class="s2sel" aria-label="Second sort">${SPELLS.filter(x => x.id !== 'F').map(x => `<option value="${x.id}" ${x.id === r.s2 ? 'selected' : ''}>${x.fr}</option>`).join('')}</select>` : `<span class="s2lbl">Flash</span>`;
+      return `<div class="scell">${head}<button type="button" class="spellbtn ${cls}" data-i="${i}" data-slot="${slot}"><span style="display:flex;align-items:center;gap:8px;min-width:0"><span class="icon ${id === 'F' ? 'F' : ''}">${id === 'F' ? 'F' : id.slice(0,3)}</span><small>${left != null && left > 0 ? '→ ' + (S.clock.running || S.clock.offset ? mmss(gameSeconds() + left) : '—') : 'dispo'}</small></span><span class="cd">${label}</span></button></div>`;
+    };
+    return `<div class="spell-row"><div class="lane">${LANES[i][1]}<small>touche ${i+1}</small></div>${cell('f')}${cell('s')}</div>`;
+  }).join('');
+  $$('.spellbtn', el).forEach(b => b.addEventListener('click', () => toggleSpell(+b.dataset.i, b.dataset.slot)));
+  $$('.s2sel', el).forEach(s => s.addEventListener('change', () => { S.spells[+s.dataset.i].s2 = s.value; S.spells[+s.dataset.i].s = null; save(); renderSpells(); }));
+  $('#hasteLucidity').classList.toggle('on', !!S.haste.lucidity);
+  $('#hasteCosmic').classList.toggle('on', !!S.haste.cosmic);
+}
+function tickSpells(){
+  if (!S.spells) return; const now = Date.now();
+  $$('#spellRows .spellbtn').forEach(b => {
+    const r = S.spells[+b.dataset.i], slot = b.dataset.slot, id = slot === 'f' ? 'F' : r.s2;
+    const left = r[slot] ? (r[slot] - now)/1000 : null;
+    const cd = $('.cd', b), small = $('small', b);
+    if (left == null){ return; }
+    if (left > 0){ cd.textContent = mmss(left); b.className = 'spellbtn ' + (left <= 30 ? 'soon' : 'running'); if (small) small.textContent = '→ ' + (S.clock.running || S.clock.offset ? mmss(gameSeconds() + left) : '—'); }
+    else if (now - r[slot] < 15000){ if (b.className !== 'spellbtn ready'){ b.className = 'spellbtn ready'; cd.textContent = 'UP !'; if (small) small.textContent = 'dispo'; beep(1); } }
+    else { r[slot] = null; save(); cd.textContent = mmss(spellCd(id)); b.className = 'spellbtn'; }
+  });
+}
+
+/* ---------- objectifs ---------- */
+const OBJ_DEFS = [
+  {id:'dragon', name:'Dragon', icon:'i-dragon', first:300, respawn:300, major:true},
+  {id:'grubs', name:'Voidgrubs', icon:'i-bug', first:480, until:885, once:true, major:true},
+  {id:'herald', name:'Rift Herald', icon:'i-eye', first:900, until:1185, once:true, major:true},
+  {id:'baron', name:'Baron Nashor', icon:'i-skull', first:1200, respawn:360, major:true},
+  {id:'elder', name:'Elder Dragon', icon:'i-elder', first:null, respawn:360, major:true},
+  {id:'scuttleTop', name:'Crabe top', icon:'i-crab', first:175, respawn:150},
+  {id:'scuttleBot', name:'Crabe bot', icon:'i-crab', first:175, respawn:150},
+  {id:'blueA', name:'Bleu allié', icon:'i-buff', first:55, respawn:300},
+  {id:'redA', name:'Rouge allié', icon:'i-buff', first:55, respawn:300},
+  {id:'blueE', name:'Bleu ennemi', icon:'i-buff', first:55, respawn:300},
+  {id:'redE', name:'Rouge ennemi', icon:'i-buff', first:55, respawn:300},
+];
+function defaultObj(){ const o = {}; for (const d of OBJ_DEFS) o[d.id] = { next: d.first, taken: 0, dead: false, alerted: false }; return o; }
+function objTake(id){
+  S.obj = S.obj || defaultObj(); const d = OBJ_DEFS.find(x => x.id === id), o = S.obj[id]; const t = gameSeconds();
+  if (d.once){ o.dead = true; o.next = null; }
+  else { o.next = t + d.respawn; o.alerted = false; }
+  o.taken++;
+  if (id === 'dragon' && o.taken >= 4 && !S.obj.elder.next){ toast('4e dragon : si une équipe a l\'âme, clique « Âme » pour lancer le timer de l\'Elder.'); }
+  save(); renderObjectives();
+}
+function objSoul(){
+  S.obj = S.obj || defaultObj(); const t = gameSeconds();
+  S.obj.elder.next = t + 360; S.obj.elder.alerted = false; S.obj.dragon.dead = true; S.obj.dragon.next = null; save(); renderObjectives(); toast('Elder Dragon dans 6:00');
+}
+function objStatus(d, o, t){
+  if (o.dead) return { cls:'gone', txt:'—', sub: d.id === 'dragon' ? 'Âme prise → Elder' : 'Parti' };
+  if (o.next == null) return { cls:'gone', txt:'—', sub: d.id === 'elder' ? 'Après l\'âme (bouton Âme sur le dragon)' : '' };
+  if (d.once && t > d.until) return { cls:'gone', txt:'parti', sub:`Disparu à ${mmss(d.until)}` };
+  if (t < o.next) return { cls: o.next - t <= 60 ? 'soon' : '', txt: mmss(o.next - t), sub:`spawn à ${mmss(o.next)}${d.once ? ' · jusqu\'à ' + mmss(d.until) : ''}` };
+  return { cls:'up', txt:'UP', sub:`depuis ${mmss(t - o.next)}${d.once ? ' · disparaît à ' + mmss(d.until) : ''}${o.taken ? ' · ' + o.taken + ' pris' : ''}` };
+}
+function renderObjectives(){
+  S.obj = S.obj || defaultObj(); const t = gameSeconds();
+  $('#objRows').innerHTML = OBJ_DEFS.map(d => { const o = S.obj[d.id]; const st = objStatus(d, o, t);
+    return `<div class="obj ${st.cls}" data-id="${d.id}"><div class="oi">${svgUse(d.icon, 22)}</div><div><div class="on">${d.name}${d.id === 'dragon' && o.taken ? ` <span class="badge gold">${o.taken}</span>` : ''}</div><div class="os">${st.sub}</div></div>
+      <div style="display:flex;align-items:center;gap:6px"><div class="oc">${st.txt}</div>${!o.dead && !(d.once && t > d.until) && o.next != null ? `<button class="btn xs take" data-id="${d.id}">Pris</button>` : ''}${d.id === 'dragon' && !o.dead ? `<button class="btn xs ghost soul" title="Une équipe a pris l'âme : lance l'Elder">Âme</button>` : ''}</div></div>`; }).join('');
+  $$('#objRows .take').forEach(b => b.addEventListener('click', () => objTake(b.dataset.id)));
+  $$('#objRows .soul').forEach(b => b.addEventListener('click', objSoul));
+}
+function tickObjectives(){
+  if (!S.obj) return; const t = gameSeconds();
+  $$('#objRows .obj').forEach(row => {
+    const d = OBJ_DEFS.find(x => x.id === row.dataset.id), o = S.obj[d.id]; const st = objStatus(d, o, t);
+    row.className = 'obj ' + st.cls; $('.oc', row).textContent = st.txt; $('.os', row).textContent = st.sub;
+    if (d.major && o.next != null && !o.dead && S.clock.running && !o.alerted && o.next - t <= 60 && o.next - t > 0){ o.alerted = true; beep(2); toast(`${d.name} dans 60 s`); }
+  });
+}
+function tick(){
+  if (currentView === 'tools'){ renderClock(); tickSpells(); tickObjectives(); }
+  if (S.session && currentView === 'session'){ $('#liveTime').textContent = mmss((Date.now() - S.session.start)/1000); }
+}
+setInterval(tick, 500);
+
+/* ---------- cheat-sheets ---------- */
+function renderCheatsheets(){
+  $('#timelineBox').innerHTML = TIMELINE_2026.map(t => `<div class="tl"><b>${esc(t.t)}</b><span>${t.s}</span></div>`).join('');
+  $('#jungleTable').innerHTML = `<colgroup><col style="width:48%"><col style="width:26%"><col style="width:26%"></colgroup><tr><th>Camp</th><th>1er spawn</th><th>Respawn</th></tr>` + JUNGLE_TABLE.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="num">${esc(r[2])}</td></tr>`).join('');
+  $('#spellTable').innerHTML = `<colgroup><col style="width:27%"><col style="width:15%"><col style="width:58%"></colgroup><tr><th>Sort</th><th>CD</th><th>Note</th></tr>` + SPELL_TABLE_NOTES.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="tiny muted">${esc(r[2])}</td></tr>`).join('');
+  $('#waveRules').innerHTML = WAVE_RULES.map(r => `<li>${r}</li>`).join('');
+  $('#newsRules').innerHTML = NEWS_2026.map(r => `<li>${r}</li>`).join('');
+  $('#benchTable').innerHTML = `<colgroup><col style="width:24%"><col style="width:17%"><col style="width:15%"><col style="width:18%"><col style="width:26%"></colgroup><tr><th>Niveau</th><th>CS/min</th><th>Morts</th><th>Vision</th><th>Focus</th></tr>` + BENCH.map(r => `<tr>${r.map((c, i) => `<td class="${i === 4 ? 'tiny muted' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('');
+}
+function renderTools(){ renderClock(); renderSpells(); renderObjectives(); }
+
+/* ---------- échauffement ---------- */
+let warm = { timer:null, step:-1, left:0 };
+function renderWarmup(){
+  $('#warmupSteps').innerHTML = WARMUP.map((w, i) => `<div class="warmup-step ${warm.step === i ? 'active' : warm.step > i ? 'done' : ''}" data-i="${i}"><span>${i+1}.</span><span>${esc(w.t)}</span><span class="d">${warm.step === i ? mmss(warm.left) : mmss(w.d)}</span></div>`).join('');
+}
+function warmupStart(){
+  warmupStop(); warm.step = 0; warm.left = WARMUP[0].d; renderWarmup(); toast('Échauffement lancé');
+  warm.timer = setInterval(() => {
+    warm.left--; const el = $$('#warmupSteps .warmup-step')[warm.step]; if (el) $('.d', el).textContent = mmss(warm.left);
+    if (warm.left <= 0){ beep(2); warm.step++; if (warm.step >= WARMUP.length){ warmupStop(); warm.step = WARMUP.length; renderWarmup(); toast('Échauffement terminé. Go ranked.'); return; } warm.left = WARMUP[warm.step].d; renderWarmup(); }
+  }, 1000);
+}
+function warmupStop(){ if (warm.timer) clearInterval(warm.timer); warm.timer = null; warm.step = -1; renderWarmup(); }
+
+/* ---------- COACH ---------- */
+let coachSel = { role: null, lvl: null, poolRole: null };
+function isoWeekKey(d = new Date()){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = date.getUTCDay() || 7; date.setUTCDate(date.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return date.getUTCFullYear() + '-W' + pad2(Math.ceil((((date - y0)/86400000) + 1)/7));
+}
+function levelFromRank(){ const ti = S.rank.tier ? tierIdx(S.rank.tier) : 2; return ti <= 1 ? 'low' : ti <= 3 ? 'mid' : ti <= 5 ? 'high' : 'top'; }
+function renderWeek(){
+  const key = isoWeekKey(); if (S.week.key !== key){ S.week = { key, done:{} }; save(); }
+  $('#weekLabel').textContent = 'Semaine ' + key.split('-W')[1];
+  const todayIdx = (new Date().getDay() + 6) % 7;
+  const total = WEEK_PLAN.reduce((a, d) => a + d.items.length, 0), done = Object.values(S.week.done).filter(Boolean).length;
+  $('#weekPlan').innerHTML = WEEK_PLAN.map((d, di) => `<div class="day ${di === todayIdx ? 'today' : ''}"><h4>${d.d}${di === todayIdx ? '<small>aujourd\'hui</small>' : ''}</h4>${d.items.map((it, ii) => { const k = di + '-' + ii; return `<label class="check ${S.week.done[k] ? 'done' : ''}"><input type="checkbox" data-k="${k}" ${S.week.done[k] ? 'checked' : ''}><span>${esc(it)}</span></label>`; }).join('')}</div>`).join('');
+  $$('#weekPlan input').forEach(cb => cb.addEventListener('change', () => { S.week.done[cb.dataset.k] = cb.checked; save(); cb.closest('.check').classList.toggle('done', cb.checked); }));
+  $('#weekLabel').textContent += ` · ${done}/${total}`;
+}
+function renderCoachContent(){
+  coachSel.role = coachSel.role || S.profile.mainRole || 'MID'; coachSel.lvl = coachSel.lvl || levelFromRank();
+  $('#coachRoleChips').innerHTML = ROLES.map(r => `<span class="chip ${coachSel.role === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#coachRoleChips .chip').forEach(c => c.onclick = () => { coachSel.role = c.dataset.v; renderCoachContent(); });
+  $('#coachLvlChips').innerHTML = LEVELS.map(l => `<span class="chip teal ${coachSel.lvl === l.id ? 'on' : ''}" data-v="${l.id}">${l.fr}</span>`).join('');
+  $$('#coachLvlChips .chip').forEach(c => c.onclick = () => { coachSel.lvl = c.dataset.v; renderCoachContent(); });
+  const R = COACH[coachSel.role], C = R[coachSel.lvl];
+  const list = arr => `<ul class="clean small">${arr.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  $('#coachContent').innerHTML = `<p class="small muted" style="margin:4px 0 12px">${esc(R.intro)}</p>
+    <div class="grid grid-3">
+      <div><h4 style="color:var(--gold)">Priorités</h4>${list(C.prio)}</div>
+      <div><h4 style="color:var(--loss)">Erreurs fréquentes</h4>${list(C.err)}</div>
+      <div><h4 style="color:var(--teal)">Checklist in-game</h4>${list(C.check.map(x => '☐ ' + x))}</div>
+    </div>
+    <div class="insight" style="margin-top:12px"><div class="ico">${svgUse('i-bolt')}</div><div><b>Drill de la semaine</b><p>${esc(C.drill)}</p></div></div>`;
+}
+function renderPool(){
+  coachSel.poolRole = coachSel.poolRole || S.profile.mainRole || 'MID';
+  $('#poolRoleChips').innerHTML = ROLES.map(r => `<span class="chip ${coachSel.poolRole === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#poolRoleChips .chip').forEach(c => c.onclick = () => { coachSel.poolRole = c.dataset.v; renderPool(); });
+  S.pool[coachSel.poolRole] = S.pool[coachSel.poolRole] || [];
+  const pool = S.pool[coachSel.poolRole];
+  const slots = [0,1,2].map(i => pool[i] || null);
+  $('#poolGrid').innerHTML = slots.map((p, i) => p ? `<div class="pool-slot filled">${champIcon(p.champ, 'lg')}<div class="pn">${esc(champName(p.champ))}</div><textarea data-i="${i}" placeholder="Matchups durs, build, plan de lane…">${esc(p.note||'')}</textarea><button class="btn xs ghost rm" data-i="${i}">retirer</button></div>`
+    : `<div class="pool-slot"><div class="champ-pick" style="width:100%"><input class="input pool-in" data-i="${i}" placeholder="+ champion" autocomplete="off"><div class="champ-list hidden"></div></div><div class="tiny muted">Slot ${i+1}</div></div>`).join('');
+  $$('#poolGrid textarea').forEach(t => t.addEventListener('change', () => { pool[+t.dataset.i].note = t.value; save(); }));
+  $$('#poolGrid .rm').forEach(b => b.addEventListener('click', () => { pool.splice(+b.dataset.i, 1); save(); renderPool(); }));
+  $$('#poolGrid .pool-in').forEach(inp => {
+    const list = inp.nextElementSibling;
+    const show = () => { const items = findChamps(inp.value, 6); list.innerHTML = items.map(c => `<button type="button" data-id="${c[0]}">${champIcon(c[0], 'sm')}<span>${esc(c[1])}</span></button>`).join(''); list.classList.toggle('hidden', !items.length); };
+    inp.addEventListener('input', show); inp.addEventListener('focus', show);
+    list.addEventListener('mousedown', e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); pool.push({ champ:b.dataset.id, note:'' }); save(); renderPool(); });
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter'){ const items = findChamps(inp.value, 1); if (items[0]){ pool.push({ champ:items[0][0], note:'' }); save(); renderPool(); } } });
+  });
+  const lvl = coachSel.lvl || levelFromRank();
+  const sug = POOL_SUGGEST[coachSel.poolRole][lvl];
+  $('#poolSuggest').innerHTML = `<div class="chips">${sug.map(n => { const c = CHAMPS.find(x => x[1] === n); return `<span class="chip" ${c ? `data-id="${c[0]}"` : ''}>${c ? champIcon(c[0], 'sm') : ''} ${esc(n)}</span>`; }).join('')}</div><p class="tiny muted" style="margin-top:6px">Niveau ${esc((LEVELS.find(l => l.id === lvl)||{}).fr)} — clique pour l'ajouter à ton pool.</p>`;
+  $$('#poolSuggest .chip').forEach(c => c.onclick = () => { if (!c.dataset.id) return; if (pool.length >= 3){ toast('3 champions max : c\'est ça, un pool tryhard'); return; } if (pool.find(p => p.champ === c.dataset.id)) return; pool.push({ champ:c.dataset.id, note:'' }); save(); renderPool(); });
+  const roleQ = { TOP:'top', JUNGLE:'jungle', MID:'mid', ADC:'adc', SUPPORT:'support' }[coachSel.poolRole];
+  $('#tierLinks').innerHTML = `<a class="btn xs" target="_blank" rel="noopener" href="https://u.gg/lol/tier-list?role=${roleQ}">Tierlist u.gg</a><a class="btn xs" target="_blank" rel="noopener" href="https://www.op.gg/champions?position=${roleQ}">Tierlist OP.GG</a><a class="btn xs" target="_blank" rel="noopener" href="https://lolalytics.com/lol/tierlist/?lane=${roleQ === 'adc' ? 'bottom' : roleQ}">Lolalytics</a>`;
+}
+function renderMental(){
+  $('#mentalRules').innerHTML = MENTAL_RULES.map(r => `<li>${r}</li>`).join('');
+  $('#tiltTriggers').innerHTML = TILT_TRIGGERS.map(t => `<span class="chip" data-v="${esc(t)}">${esc(t)}${S.tilt[t] ? ` <b>${S.tilt[t]}</b>` : ''}</span>`).join('');
+  $$('#tiltTriggers .chip').forEach(c => c.onclick = () => { S.tilt[c.dataset.v] = (S.tilt[c.dataset.v]||0) + 1; save(); renderMental(); toast('Noté : ' + c.dataset.v); });
+  const entries = Object.entries(S.tilt).sort((a,b) => b[1]-a[1]);
+  $('#tiltTriggerStats').innerHTML = entries.length ? `Ton déclencheur n° 1 : <b>${esc(entries[0][0])}</b> (${entries[0][1]} fois). ${entries[0][0] === 'Flame dans le chat' ? 'Mute all dès le chargement, sans exception.' : entries[0][0] === 'Fatigue / tard le soir' ? 'Pas de ranked après 23h pendant deux semaines. Compare tes stats ensuite.' : entries[0][0] === 'Série de défaites' ? 'La règle des 2 défaites existe pour ça. Respecte-la à la lettre.' : 'Prépare une réponse à l\'avance : que fais-tu la prochaine fois que ça arrive ?'}` : 'Clique un déclencheur à chaque fois qu\'il te fait tilter : on verra vite le motif.';
+}
+function renderReviews(){
+  const list = S.reviews.slice().reverse().slice(0, 5);
+  $('#reviewList').innerHTML = list.length ? list.map(r => `<details><summary><span>Review du ${esc(fmtDateTime(r.ts))}</span></summary><div class="body"><p><b>Pire mort :</b> ${esc(r.q1)}</p><p><b>Décision macro :</b> ${esc(r.q2)}</p><p><b>À répéter :</b> ${esc(r.q3)}</p><p><b>Focus suivant :</b> ${esc(r.q4)}</p><button class="btn xs ghost rv-del" data-id="${r.id}">supprimer</button></div></details>`).join('') : '';
+  $$('.rv-del').forEach(b => b.onclick = () => { S.reviews = S.reviews.filter(r => r.id !== b.dataset.id); save(); renderReviews(); });
+}
+function saveReview(){
+  const q = ['#rv1','#rv2','#rv3','#rv4'].map(id => $(id).value.trim());
+  if (!q.some(Boolean)){ toast('Écris au moins une réponse'); return; }
+  S.reviews.push({ id:uid(), ts:Date.now(), q1:q[0], q2:q[1], q3:q[2], q4:q[3] }); save();
+  ['#rv1','#rv2','#rv3','#rv4'].forEach(id => $(id).value = ''); renderReviews(); toast('Review sauvegardée');
+}
+function renderCoach(){ renderWeek(); renderCoachContent(); renderPool(); renderMental(); renderReviews(); }
+
+/* ---------- MUSIQUE ---------- */
+const q = s => encodeURIComponent(s);
+const trackLinks = (t, a) => { const s = `${t} ${a.split(' — ')[0]}`; return `<a target="_blank" rel="noopener" title="YouTube" href="https://www.youtube.com/results?search_query=${q(s)}">${svgUse('i-yt', 16)}</a><a target="_blank" rel="noopener" title="Spotify" href="https://open.spotify.com/search/${q(s)}">${svgUse('i-sp', 16)}</a><a target="_blank" rel="noopener" title="Deezer" href="https://www.deezer.com/search/${q(s)}">${svgUse('i-dz', 16)}</a>`; };
+const trackHTML = (tr, i) => `<div class="track"><span class="n">${i+1}</span><span class="t">${esc(tr[0])} <small>— ${esc(tr[1])}</small></span>${trackLinks(tr[0], tr[1])}</div>`;
+let mixSel = new Set(PLAYLISTS.map(p => p.id));
+function renderMusic(){
+  $('#playlists').innerHTML = PLAYLISTS.map(p => `<div class="card pl"><div class="pl-head"><div class="pl-cover" style="background:linear-gradient(135deg, ${p.color}, ${p.color}88)">${p.tag[0]}</div><div><h3>${esc(p.name)}</h3><div class="small muted">${esc(p.sub)}</div><div style="margin-top:4px"><span class="badge ${p.tag === 'FOCUS' ? 'teal' : p.tag === 'HYPE' ? 'gold' : ''}">${p.phase}</span></div></div></div>
+    <div class="pl-tracks">${p.tracks.slice(0, 6).map(trackHTML).join('')}</div>
+    ${p.tracks.length > 6 ? `<details><summary><span>${p.tracks.length - 6} pistes de plus</span></summary><div class="body"><div class="pl-tracks">${p.tracks.slice(6).map((t, i) => trackHTML(t, i+6)).join('')}</div></div></details>` : ''}
+    <div class="btn-row"><a class="btn xs" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q(p.search + ' playlist')}">${svgUse('i-yt', 14)} Playlists YouTube</a><a class="btn xs" target="_blank" rel="noopener" href="https://open.spotify.com/search/${q(p.search)}/playlists">${svgUse('i-sp', 14)} Spotify</a><a class="btn xs" target="_blank" rel="noopener" href="https://www.deezer.com/search/${q(p.search)}/playlist">${svgUse('i-dz', 14)} Deezer</a></div></div>`).join('');
+  $('#mixChips').innerHTML = PLAYLISTS.map(p => `<span class="chip ${mixSel.has(p.id) ? 'on' : ''}" data-v="${p.id}">${esc(p.name)}</span>`).join('');
+  $$('#mixChips .chip').forEach(c => c.onclick = () => { if (mixSel.has(c.dataset.v)) mixSel.delete(c.dataset.v); else mixSel.add(c.dataset.v); c.classList.toggle('on', mixSel.has(c.dataset.v)); });
+}
+let lastMix = [];
+function generateMix(){
+  const lists = PLAYLISTS.filter(p => mixSel.has(p.id)); if (!lists.length){ toast('Sélectionne au moins un style'); return; }
+  const pools = lists.map(p => p.tracks.slice().sort(() => Math.random() - .5));
+  const out = []; let i = 0;
+  while (out.length < 12 && pools.some(p => p.length)){ const p = pools[i % pools.length]; if (p.length) out.push(p.pop()); i++; }
+  lastMix = out;
+  $('#mixTracks').innerHTML = out.map(trackHTML).join('');
+}
+function copyMix(){
+  if (!lastMix.length){ toast('Génère d\'abord une playlist'); return; }
+  const txt = lastMix.map((t, i) => `${i+1}. ${t[0]} — ${t[1]}`).join('\n');
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Playlist copiée')).catch(() => toast('Copie impossible'));
+}
+
+/* ---------- RÉGLAGES ---------- */
+function fillTierSelects(){
+  const opts = `<option value="">— Non classé —</option>` + TIERS.map(t => `<option value="${t.id}">${t.fr}</option>`).join('');
+  $('#setTier').innerHTML = opts; $('#goalTier').innerHTML = opts;
+  const dopts = DIVS.slice().reverse().map(d => `<option value="${d}">${d}</option>`).join('');
+  $('#setDiv').innerHTML = dopts; $('#goalDiv').innerHTML = dopts;
+  $('#setRole').innerHTML = ROLES.map(r => `<option value="${r.id}">${r.fr}</option>`).join('');
+}
+function renderSettings(){
+  $('#setTier').value = S.rank.tier || ''; $('#setDiv').value = S.rank.div || 'IV'; $('#setLp').value = S.rank.lp || 0;
+  $('#goalTier').value = S.goal.tier || ''; $('#goalDiv').value = S.goal.div || 'IV'; $('#goalGain').value = S.goal.gain ?? '';
+  $('#setName').value = S.profile.name || ''; $('#setRole').value = S.profile.mainRole || 'MID';
+  $('#setTheme').value = S.settings.theme || 'dark'; $('#setSound').value = S.settings.sound ? '1' : '0';
+  $('#ddVer').textContent = DD_VER;
+  const syncDiv = (tierSel, divSel) => { const t = TIERS.find(x => x.id === tierSel.value); divSel.disabled = !t || !t.divs; };
+  syncDiv($('#setTier'), $('#setDiv')); syncDiv($('#goalTier'), $('#goalDiv'));
+  $('#setTier').onchange = () => syncDiv($('#setTier'), $('#setDiv')); $('#goalTier').onchange = () => syncDiv($('#goalTier'), $('#goalDiv'));
+}
+function saveRank(){
+  const tier = $('#setTier').value; const t = TIERS.find(x => x.id === tier);
+  S.rank = { tier, div: t && t.divs ? $('#setDiv').value : '', lp: clamp(+$('#setLp').value || 0, 0, t && !t.divs ? 5000 : 99) };
+  const gt = $('#goalTier').value; const g = TIERS.find(x => x.id === gt);
+  S.goal = { tier: gt, div: g && g.divs ? $('#goalDiv').value : '', gain: $('#goalGain').value.trim() === '' ? null : +$('#goalGain').value };
+  save(); renderRankChip(); renderSettings(); toast('Rang enregistré : ' + rankLabel(S.rank));
+}
+function saveProfile(){
+  S.profile.name = $('#setName').value.trim(); S.profile.mainRole = $('#setRole').value;
+  S.settings.theme = $('#setTheme').value; S.settings.sound = $('#setSound').value === '1';
+  applyTheme(); save(); toast('Profil enregistré');
+}
+function applyTheme(){ document.documentElement.dataset.theme = S.settings.theme === 'light' ? 'light' : 'dark'; $('meta[name=theme-color]').content = S.settings.theme === 'light' ? '#f3f4f8' : '#0b1020'; }
+function exportData(){
+  const blob = new Blob([JSON.stringify(S, null, 1)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `climb-${dayKey(Date.now())}.json`; document.body.appendChild(a); a.click(); a.remove(); toast('Export téléchargé');
+}
+function importData(file){
+  const fr = new FileReader();
+  fr.onload = () => { try { const d = JSON.parse(fr.result); if (!d || !Array.isArray(d.games)) throw 0; if (!confirm(`Importer ${d.games.length} games ? Les données actuelles seront remplacées.`)) return; S = Object.assign(defaultState(), d); save(); location.reload(); } catch(e){ toast('Fichier invalide'); } };
+  fr.readAsText(file);
+}
+
+/* ---------- rendu global ---------- */
+function render(view){
+  switch(view){
+    case 'home': renderHome(); break;
+    case 'session': renderSession(); break;
+    case 'stats': renderStats(); break;
+    case 'tools': renderTools(); break;
+    case 'coach': renderCoach(); break;
+    case 'music': renderMusic(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+/* ---------- init ---------- */
+function init(){
+  applyTheme(); fillTierSelects(); renderRankChip(); renderCheatsheets(); setupChampPicker();
+  $('#startSession').addEventListener('click', startSession);
+  $('#endSession').addEventListener('click', endSession);
+  $('#saveGame').addEventListener('click', saveGame);
+  $('#warmupStart').addEventListener('click', warmupStart);
+  $('#warmupStop').addEventListener('click', warmupStop);
+  $('#clockToggle').addEventListener('click', clockToggle);
+  $('#clockReset').addEventListener('click', () => { if (confirm('Remettre le chrono, les sorts et les objectifs à zéro ?')) clockReset(); });
+  $('#clockSyncBtn').addEventListener('click', clockSync);
+  $('#clockSync').addEventListener('keydown', e => { if (e.key === 'Enter') clockSync(); });
+  $('#hasteLucidity').addEventListener('click', () => { S.haste.lucidity = !S.haste.lucidity; save(); renderSpells(); });
+  $('#hasteCosmic').addEventListener('click', () => { S.haste.cosmic = !S.haste.cosmic; save(); renderSpells(); });
+  $('#openBreath').addEventListener('click', () => openPause('tilt'));
+  $('#breathStart').addEventListener('click', startBreath);
+  $('#breathClose').addEventListener('click', () => { stopBreath(); $('#breathModal').classList.remove('open'); });
+  $('#breathStop').addEventListener('click', () => { stopBreath(); $('#breathModal').classList.remove('open'); if (S.session) endSession(); });
+  $('#saveReview').addEventListener('click', saveReview);
+  $('#mixBtn').addEventListener('click', generateMix);
+  $('#mixCopy').addEventListener('click', copyMix);
+  $('#saveRank').addEventListener('click', saveRank);
+  $('#saveProfile').addEventListener('click', saveProfile);
+  $('#exportBtn').addEventListener('click', exportData);
+  $('#importFile').addEventListener('change', e => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ''; });
+  $('#resetBtn').addEventListener('click', () => { if (confirm('Tout effacer ? (games, sessions, pool, reviews). Pense à exporter avant.')) { try { localStorage.removeItem(KEY); } catch(e){} S = defaultState(); location.reload(); } });
+  document.addEventListener('keydown', e => {
+    if (currentView !== 'tools') return; const tag = (e.target.tagName || '').toLowerCase(); if (['input','textarea','select'].includes(tag)) return;
+    if (e.key >= '1' && e.key <= '5'){ toggleSpell(+e.key - 1, 'f'); }
+    else if (e.key.toLowerCase() === 'g'){ clockToggle(); }
+  });
+  let rt = null; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (currentView === 'home' || currentView === 'stats') render(currentView); }, 150); });
+  const hash = (location.hash || '#home').slice(1);
+  nav(VIEWS.includes(hash) ? hash : 'home');
+  refreshDD();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
