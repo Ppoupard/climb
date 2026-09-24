@@ -430,6 +430,9 @@ details + details{margin-top:8px}
 .gear-mobile{background:transparent;border:1px solid var(--border);border-radius:10px;width:36px;height:36px;display:inline-grid;place-items:center;color:var(--text-2);cursor:pointer;flex:none}
 .gear-mobile:hover{background:var(--surface-2)}
 @media(min-width:900px){.gear-mobile{display:none}}
+.hbar.wide{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) 74px}
+.hbar.wide .name span{white-space:normal;line-height:1.2}
+.death-row .input{padding:6px 8px;font-size:.85rem}
 </style>
 </head>
 <body>
@@ -556,6 +559,7 @@ details + details{margin-top:8px}
           <div><label class="field">Pause après</label><select class="input" id="stopAfter"><option value="2">2 défaites d'affilée</option><option value="1">1 défaite</option><option value="3">3 défaites d'affilée</option></select></div>
         </div>
         <button class="btn primary block" id="startSession" style="margin-top:12px"><svg><use href="#i-play"/></svg> Démarrer la session</button>
+        <button class="btn ghost block sm" id="startExpress" style="margin-top:6px" title="Pas d'objectif, pas d'humeur : tu joues, tu notes V/D + LP">Session express (sans check, saisie V/D + LP)</button>
         <p class="tiny muted" id="coachPreMsg" style="margin-top:8px"></p>
       </div>
     </div>
@@ -585,7 +589,9 @@ details + details{margin-top:8px}
 
     <div class="grid grid-2" style="margin-top:14px">
       <div class="card">
-        <div class="card-title"><h3>Ajouter une game</h3><span class="tiny muted">30 secondes chrono</span></div>
+        <div class="card-title"><h3>Ajouter une game</h3>
+          <div class="chips" id="formModeChips"><span class="chip teal" data-v="express">Express</span><span class="chip teal" data-v="full">Complète</span></div>
+        </div>
         <label class="field">Champion</label>
         <div class="champ-pick">
           <input class="input" id="champInput" placeholder="Tape un nom… (ex : Ahri)" autocomplete="off">
@@ -593,9 +599,7 @@ details + details{margin-top:8px}
         </div>
         <div class="recent-champs" id="recentChamps"></div>
         <div class="champ-selected hidden" id="champSelected"></div>
-
-        <label class="field" style="margin-top:10px">Rôle</label>
-        <div class="chips" id="roleChips"></div>
+        <div id="ficheReminder"></div>
 
         <label class="field" style="margin-top:10px">Résultat</label>
         <div class="chips" id="resultChips">
@@ -604,26 +608,41 @@ details + details{margin-top:8px}
           <span class="chip" data-v="R">Remake</span>
         </div>
 
-        <div class="frow-3" style="margin-top:10px">
-          <div><label class="field">Kills</label><input class="input" type="number" id="gK" min="0" inputmode="numeric"></div>
-          <div><label class="field">Morts</label><input class="input" type="number" id="gD" min="0" inputmode="numeric"></div>
-          <div><label class="field">Assists</label><input class="input" type="number" id="gA" min="0" inputmode="numeric"></div>
-        </div>
-        <div class="frow-3" style="margin-top:10px">
-          <div><label class="field">Durée (min)</label><input class="input" type="number" id="gDur" min="1" placeholder="28" inputmode="numeric"></div>
-          <div><label class="field">CS total</label><input class="input" type="number" id="gCs" min="0" placeholder="180" inputmode="numeric"></div>
-          <div><label class="field">Score vision</label><input class="input" type="number" id="gVis" min="0" placeholder="25" inputmode="numeric"></div>
-        </div>
         <div class="frow" style="margin-top:10px">
           <div><label class="field">LP gagnés / perdus</label><input class="input" type="number" id="gLp" placeholder="+20 ou -18" inputmode="numeric"></div>
-          <div><label class="field">Tilt après la game</label><div class="scale" id="tiltScale"></div></div>
+          <div><label class="field">Objectif tenu ?</label><div class="chips" id="goalOkChips"><span class="chip win" data-v="1">Oui</span><span class="chip loss" data-v="0">Non</span></div></div>
         </div>
 
-        <label class="field" style="margin-top:10px">Erreur principale</label>
-        <div class="chips" id="errChips"></div>
-        <label class="field" style="margin-top:10px">La leçon (1 phrase)</label>
-        <input class="input" id="gLesson" placeholder="Ex : j'ai face-check le bush sans vision à 14 min">
+        <div id="formDetails">
+          <label class="field" style="margin-top:10px">Rôle</label>
+          <div class="chips" id="roleChips"></div>
+
+          <div class="frow-3" style="margin-top:10px">
+            <div><label class="field">Kills</label><input class="input" type="number" id="gK" min="0" inputmode="numeric"></div>
+            <div><label class="field">Morts</label><input class="input" type="number" id="gD" min="0" inputmode="numeric"></div>
+            <div><label class="field">Assists</label><input class="input" type="number" id="gA" min="0" inputmode="numeric"></div>
+          </div>
+          <div class="frow-3" style="margin-top:10px">
+            <div><label class="field">Durée (min)</label><input class="input" type="number" id="gDur" min="1" placeholder="28" inputmode="numeric"></div>
+            <div><label class="field">CS total</label><input class="input" type="number" id="gCs" min="0" placeholder="180" inputmode="numeric"></div>
+            <div><label class="field">Score vision</label><input class="input" type="number" id="gVis" min="0" placeholder="25" inputmode="numeric"></div>
+          </div>
+          <div class="frow" style="margin-top:10px">
+            <div><label class="field">1<sup>re</sup> mort à (min)</label><input class="input" type="number" id="gFd" min="0" placeholder="vide = 0 mort" inputmode="numeric"></div>
+            <div><label class="field">Tilt après la game</label><div class="scale" id="tiltScale"></div></div>
+          </div>
+
+          <label class="field" style="margin-top:10px">Journal des morts <span class="muted" style="text-transform:none;letter-spacing:0">(minute + cause)</span></label>
+          <div id="deathRows" class="grid" style="gap:6px"></div>
+          <button class="btn xs ghost" id="addDeath" type="button" style="margin-top:6px">+ ajouter une mort</button>
+
+          <label class="field" style="margin-top:10px">Erreur principale</label>
+          <div class="chips" id="errChips"></div>
+          <label class="field" style="margin-top:10px">La leçon (1 phrase)</label>
+          <input class="input" id="gLesson" placeholder="Ex : j'ai face-check le bush sans vision à 14 min">
+        </div>
         <button class="btn primary block" id="saveGame" style="margin-top:12px">Enregistrer la game</button>
+        <p class="tiny muted" id="formHint" style="margin-top:6px"></p>
       </div>
 
       <div class="card">
@@ -663,6 +682,18 @@ details + details{margin-top:8px}
     <div class="card">
       <div class="card-title"><h3>Erreurs principales</h3><span class="tiny muted">à corriger en priorité</span></div>
       <div id="errBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Morts par phase de game</h3><span class="tiny muted">journal des morts</span></div>
+      <div id="deathPhaseBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Causes de mort</h3><span class="tiny muted">journal des morts</span></div>
+      <div id="deathCauseBars" class="hbars"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Objectifs de session</h3><span class="tiny muted">mesuré + auto-évalué</span></div>
+      <div id="goalBars" class="hbars"></div>
     </div>
     <div class="card">
       <div class="card-title"><h3>Winrate selon l'humeur avant la game</h3></div>
@@ -714,7 +745,7 @@ details + details{margin-top:8px}
         <label class="chip" id="hasteLucidity">+ Bottes Ionian (10 haste)</label>
         <label class="chip" id="hasteCosmic">+ Cosmic Insight (18 haste)</label>
       </div>
-      <p class="tiny muted" style="margin-top:8px">Flash 5:00 · Ignite 3:00 · TP 5:00 (Unleashed 5:00→3:30 selon le niveau) · Exhaust / Heal / Cleanse / Ghost 4:00 · Barrière 3:00 · Smite 1:30. Le texte de chat est copié automatiquement (ex : « mid flash 12:35 »).</p>
+      <p class="tiny muted" style="margin-top:8px" id="spellNote"></p>
     </div>
     <div class="card">
       <div class="card-title"><h3>Objectifs (saison 2026)</h3><span class="tiny muted">clique « pris » à la mort de l'objectif</span></div>
@@ -723,7 +754,7 @@ details + details{margin-top:8px}
     </div>
   </div>
 
-  <div class="section-head"><h2>Cheat-sheet</h2><p class="muted small">Chiffres à jour patch 26.19 (sept. 2026)</p></div>
+  <div class="section-head"><h2>Cheat-sheet</h2><p class="muted small" id="cheatNote"></p></div>
   <div class="grid grid-3">
     <div class="card">
       <div class="card-title"><h3>Timeline de la Faille</h3></div>
@@ -766,9 +797,54 @@ details + details{margin-top:8px}
   <div class="section-head"><h2>Coach</h2><p class="muted small">Le plan d'un athlète appliqué à la Faille.</p></div>
 
   <div class="card">
+    <div class="card-title"><h3>Bilan de la semaine</h3>
+      <div class="chips" id="reportWeekChips"><span class="chip on" data-v="0">Cette semaine</span><span class="chip" data-v="1">Semaine dernière</span></div>
+    </div>
+    <div id="weekReport"></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
     <div class="card-title"><h3>Plan de la semaine</h3><span class="tiny muted" id="weekLabel"></span></div>
+    <div class="frow" style="margin-bottom:10px">
+      <div style="grid-column:1 / -1"><label class="field">Objectif de la semaine</label><input class="input" id="weekGoal" placeholder="Ex : 7 CS/min de moyenne, ou 0 game après 23h"></div>
+    </div>
     <div class="week" id="weekPlan"></div>
     <p class="tiny muted" style="margin-top:8px">Coche ce que tu as fait ; la semaine se remet à zéro chaque lundi. Le repos fait partie de l'entraînement.</p>
+  </div>
+
+  <div class="section-head"><h2>Fiches champion</h2><p class="muted small">Combos, spikes, build, matchups : ce que tu relis pendant le chargement.</p></div>
+  <div class="card">
+    <div class="frow" style="align-items:end">
+      <div><label class="field">Champion</label><div class="champ-pick"><input class="input" id="ficheInput" placeholder="Choisis un champion…" autocomplete="off"><div class="champ-list hidden" id="ficheList"></div></div></div>
+      <div class="recent-champs" id="ficheQuick" style="margin-top:0"></div>
+    </div>
+    <div id="ficheBody" style="margin-top:12px"></div>
+  </div>
+
+  <div class="section-head"><h2>Draft</h2><p class="muted small">90 secondes pour ne pas perdre la game avant qu'elle commence.</p></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="card-title"><h3>Mes bans</h3><span class="tiny muted">par rôle · les champions que tu détestes affronter</span></div>
+      <div class="chips" id="banRoleChips" style="margin-bottom:8px"></div>
+      <div id="banList" class="chips" style="margin-bottom:8px"></div>
+      <div class="champ-pick"><input class="input" id="banInput" placeholder="+ ajouter un ban" autocomplete="off"><div class="champ-list hidden" id="banPick"></div></div>
+      <div class="divider"></div>
+      <div class="card-title"><h3>Matchup du jour</h3></div>
+      <div class="frow">
+        <div><label class="field">Mon champion</label><select class="input" id="muMine"></select></div>
+        <div><label class="field">En face</label><div class="champ-pick"><input class="input" id="muEnemy" placeholder="Champion adverse" autocomplete="off"><div class="champ-list hidden" id="muPick"></div></div></div>
+      </div>
+      <div id="muResult" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Check de compo</h3><span class="tiny muted">coche ce que chaque équipe a</span></div>
+      <label class="field">Mon équipe</label>
+      <div class="chips" id="compTeam"></div>
+      <label class="field" style="margin-top:10px">Équipe adverse</label>
+      <div class="chips" id="compEnemy"></div>
+      <div id="compResult" style="margin-top:10px"></div>
+      <button class="btn xs ghost" id="compReset" style="margin-top:8px">Réinitialiser</button>
+    </div>
   </div>
 
   <div class="section-head"><h2>Fondamentaux par rôle</h2></div>
@@ -800,7 +876,19 @@ details + details{margin-top:8px}
       <div id="tiltTriggerStats" class="tiny muted" style="margin-top:8px"></div>
     </div>
     <div class="card span-2">
-      <div class="card-title"><h3>Review de game (5 min, sans replay obligatoire)</h3></div>
+      <div class="card-title"><h3>Review de game</h3><span class="tiny muted">15 min avec le replay, 5 min sans</span></div>
+      <div class="grid grid-2">
+        <div>
+          <label class="field">Game à reviewer</label>
+          <select class="input" id="rvGame"></select>
+          <div id="rvGameInfo" class="small muted" style="margin-top:6px"></div>
+        </div>
+        <div>
+          <label class="field">La méthode (dans l'ordre)</label>
+          <div id="reviewSteps"></div>
+        </div>
+      </div>
+      <div class="divider"></div>
       <div class="grid grid-2">
         <div>
           <label class="field">Ma pire mort : pourquoi exactement ?</label><textarea class="input" id="rv1" placeholder="Pas « j'ai été gank » mais « j'étais à 3 vagues de ma tour sans vision à 6:10 »"></textarea>
@@ -883,6 +971,15 @@ details + details{margin-top:8px}
       </div>
       <div class="divider"></div>
       <p class="tiny muted">Icônes de champions : Data Dragon (Riot Games), version <span id="ddVer">—</span>. CLIMB n'est pas affilié à Riot Games. Sur téléphone : « Ajouter à l'écran d'accueil » pour l'utiliser comme une appli.</p>
+    </div>
+    <div class="card span-2">
+      <div class="card-title"><h3>Valeurs du patch</h3><span id="patchBadge"></span></div>
+      <p class="small muted">Timers d'objectifs, respawns et cooldowns utilisés par les outils et la cheat-sheet. Vérifiés sur le patch <b id="patchVerified"></b> ; après un gros patch, corrige ici (en secondes) sans attendre une mise à jour de l'appli.</p>
+      <div id="patchForm" class="grid grid-3" style="gap:10px"></div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn primary" id="patchSave">Enregistrer les valeurs</button>
+        <button class="btn ghost" id="patchReset">Revenir aux valeurs du patch vérifié</button>
+      </div>
     </div>
   </div>
 </section>
@@ -1279,6 +1376,75 @@ const PLAYLISTS = [
     tracks:[['Nandemonaiya','RADWIMPS — Your Name'],['Hikaru Nara','Goose house — Your Lie in April'],['Orange','7!! — Your Lie in April'],['Kimi no Shiranai Monogatari','supercell — Bakemonogatari'],['Aoi Shiori','Galileo Galilei — Anohana'],['Secret Base (Kimi ga Kureta Mono)','ZONE — Anohana'],['Uchiage Hanabi','DAOKO & Kenshi Yonezu'],['Merry-Go-Round of Life','Joe Hisaishi — Le Château ambulant'],['Path of the Wind','Joe Hisaishi — Mon voisin Totoro'],['Lemon','Kenshi Yonezu'],['Grand Escape','RADWIMPS — Les Enfants du temps'],['Wind','Akeboshi — Naruto']]},
 ];
 
+/* ---------- v2 : valeurs de patch (modifiables dans les réglages) ---------- */
+const PATCH_VERIFIED = '26.19';
+const PATCH_DEFAULTS = [
+  {k:'minions', fr:'Spawn des sbires', v:30, grp:'Timeline'},
+  {k:'campFirst', fr:'1er spawn des camps', v:55, grp:'Timeline'},
+  {k:'scuttleFirst', fr:'1er crabe', v:175, grp:'Timeline'},
+  {k:'dragonFirst', fr:'1er dragon', v:300, grp:'Timeline'},
+  {k:'grubsFirst', fr:'Voidgrubs (spawn)', v:480, grp:'Timeline'},
+  {k:'grubsUntil', fr:'Voidgrubs (disparition)', v:885, grp:'Timeline'},
+  {k:'heraldFirst', fr:'Herald (spawn)', v:900, grp:'Timeline'},
+  {k:'heraldUntil', fr:'Herald (disparition)', v:1185, grp:'Timeline'},
+  {k:'baronFirst', fr:'Baron (spawn)', v:1200, grp:'Timeline'},
+  {k:'dragonRespawn', fr:'Dragon (respawn)', v:300, grp:'Respawn'},
+  {k:'baronRespawn', fr:'Baron (respawn)', v:360, grp:'Respawn'},
+  {k:'elderRespawn', fr:'Elder (respawn)', v:360, grp:'Respawn'},
+  {k:'scuttleRespawn', fr:'Crabe (respawn)', v:150, grp:'Respawn'},
+  {k:'buffRespawn', fr:'Buffs bleu / rouge (respawn)', v:300, grp:'Respawn'},
+  {k:'campRespawn', fr:'Petits camps (respawn)', v:135, grp:'Respawn'},
+  {k:'cd_F', fr:'Flash', v:300, grp:'Sorts'},
+  {k:'cd_IGN', fr:'Ignite', v:180, grp:'Sorts'},
+  {k:'cd_TP', fr:'Téléport', v:300, grp:'Sorts'},
+  {k:'cd_EXH', fr:'Exhaust', v:240, grp:'Sorts'},
+  {k:'cd_HEAL', fr:'Heal', v:240, grp:'Sorts'},
+  {k:'cd_BAR', fr:'Barrière', v:180, grp:'Sorts'},
+  {k:'cd_CLE', fr:'Cleanse', v:240, grp:'Sorts'},
+  {k:'cd_GHO', fr:'Ghost', v:240, grp:'Sorts'},
+  {k:'cd_SMI', fr:'Smite', v:90, grp:'Sorts'},
+];
+
+/* Objectifs de session mesurables automatiquement (null = non mesurable → auto-évaluation) */
+const GOAL_CHECKS = {
+  '0 mort avant 10 min': g => (g.d === 0) ? true : (g.fd == null ? null : g.fd >= 10),
+  'CS ≥ 7 / min à 15 min': g => { const c = (g.cs && g.dur) ? g.cs/g.dur : null; return c == null ? null : c >= 7; },
+  'Un seul champion toute la session': null,
+};
+
+const REVIEW_STEPS = [
+  {t:'Les 3 premières minutes', d:'Runes, objets de départ, position au spawn, où va le jungler adverse. La moitié des lanes perdues se décident avant 2:00.'},
+  {t:'Chaque mort : pause 5 secondes avant', d:'Qu\'est-ce que je savais à ce moment-là ? (position du jungler, wave, cooldowns). La mort a une cause, pas une malchance.'},
+  {t:'Chaque objectif : où j\'étais 60 s avant', d:'Grubs 8:00, herald 15:00, dragons, Baron 20:00. Si tu n\'étais pas en train de préparer l\'objectif, qu\'est-ce que tu faisais ?'},
+  {t:'Un fight perdu, en x0.5', d:'Ma cible, ma position, mes sorts. Un seul fight suffit : c\'est le même défaut qui revient.'},
+  {t:'Une seule correction', d:'Tu ressors avec UNE phrase qui devient ton focus de la prochaine session. Pas cinq.'},
+];
+
+const SPIKES = ['Niveau 2','Niveau 3','Niveau 6','1er objet','2 objets','3 objets','Niveau 11','Niveau 16','Late game'];
+
+const COMP_TAGS = [
+  {id:'engage', fr:'Engage'},
+  {id:'front', fr:'Frontline / tank'},
+  {id:'ad', fr:'Dégâts AD'},
+  {id:'ap', fr:'Dégâts AP'},
+  {id:'peel', fr:'Peel / protection'},
+  {id:'clear', fr:'Waveclear'},
+  {id:'poke', fr:'Poke / siège'},
+  {id:'cc', fr:'CC lourd'},
+  {id:'assassin', fr:'Assassins / dive'},
+  {id:'scale', fr:'Scaling late'},
+];
+const DRAFT_ADVICE = {
+  cc: 'Beaucoup de CC en face → Cleanse ou Mercury sur le carry, Tenacité, ne pas engager le premier.',
+  assassin: 'Assassins / dive → Zhonya, Exhaust au support, jouer groupé après 15 min, pinks dans les flancs.',
+  poke: 'Poke / siège → ne pas rester sous tour à se faire grignoter : engage ou flanc, ou concède et trade ailleurs.',
+  front: 'Frontline lourde → dégâts % PV (Lame du roi déchu, Liandry), ne pas focus le tank.',
+  scale: 'Compo qui scale → jouer le tempo : objectifs tôt, grubs 8:00, fermer avant 25 min.',
+  engage: 'Engage forte → vision en profondeur, garder le flash, ne pas face-check, se placer en arc.',
+  ad: 'Full AD → armure sur tout le monde (Randuin, Frozen Heart, Tabi).',
+  ap: 'Full AP → résistance magique (Mercury, Force of Nature, Kaenic).',
+};
+
 /* ============================================================
    CLIMB — application (core)
    ============================================================ */
@@ -1314,8 +1480,11 @@ function defaultState(){
     pool: { TOP:[], JUNGLE:[], MID:[], ADC:[], SUPPORT:[] },
     reviews: [],
     tilt: {},
-    week: { key:'', done:{} },
-    settings: { theme:'dark', sound:true, ddVersion:DD_FALLBACK_VERSION, champCache:null },
+    week: { key:'', done:{}, goal:'' },
+    fiches: {},
+    bans: { TOP:[], JUNGLE:[], MID:[], ADC:[], SUPPORT:[] },
+    weeks: {},
+    settings: { theme:'dark', sound:true, ddVersion:DD_FALLBACK_VERSION, champCache:null, overrides:{}, formMode:'express' },
     clock: { running:false, startedAt:0, offset:0 },
     spells: null,
     obj: null,
@@ -1335,6 +1504,13 @@ function load(){
 }
 let S = load() || defaultState();
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+/* valeurs de patch : défaut ou surcharge saisie dans les réglages */
+function PV(k){ const o = S.settings.overrides || {}; if (o[k] != null && !isNaN(o[k])) return +o[k]; const d = PATCH_DEFAULTS.find(x => x.k === k); return d ? d.v : 0; }
+const champSlug = id => id === 'MonkeyKing' ? 'wukong' : String(id).toLowerCase();
+const champLinks = id => { const s = champSlug(id); return { ugg:`https://u.gg/lol/champions/${s}/build`, lola:`https://lolalytics.com/lol/${s}/build/`, opgg:`https://www.op.gg/champions/${s}`, uggMu:`https://u.gg/lol/champions/${s}/matchups`, lolaVs: e => `https://lolalytics.com/lol/${s}/vs/${champSlug(e)}/build/` }; };
+function goalCheck(goal, g){ const fn = GOAL_CHECKS[goal]; if (!fn) return null; try { return fn(g); } catch(e){ return null; } }
+function fiche(id){ S.fiches = S.fiches || {}; if (!S.fiches[id]) S.fiches[id] = { combos:'', spikes:[], build:'', plan:'', matchups:[] }; return S.fiches[id]; }
 
 /* ---------- champions ---------- */
 let CHAMPS = (S.settings.champCache && S.settings.champCache.length > 100) ? S.settings.champCache : CHAMPS_FALLBACK.slice();
@@ -1362,6 +1538,7 @@ async function refreshDD(){
     }
     DD_VER = ver; S.settings.ddVersion = ver; save();
     const el = $('#ddVer'); if (el) el.textContent = ver + ' (patch 26.' + (ver.split('.')[1]||'?') + ')';
+    try { renderPatchBadge(); } catch(e){}
   } catch(e){ /* hors ligne : liste embarquée */ }
 }
 
@@ -1454,14 +1631,15 @@ function streak(games){ // games chronologiques
 function summarize(games){
   const played = games.filter(g => g.result !== 'R');
   const w = played.filter(g => g.result === 'W').length;
-  const ks = played.reduce((a,g) => a+(g.k||0), 0), ds = played.reduce((a,g) => a+(g.d||0), 0), as = played.reduce((a,g) => a+(g.a||0), 0);
+  const withK = played.filter(g => g.k != null);
+  const ks = withK.reduce((a,g) => a+(g.k||0), 0), ds = withK.reduce((a,g) => a+(g.d||0), 0), as = withK.reduce((a,g) => a+(g.a||0), 0);
   const csl = played.map(csmin).filter(x => x != null);
   const vis = played.filter(g => g.vis != null && g.dur).map(g => g.vis/g.dur);
   const lp = played.reduce((a,g) => a+(g.lp||0), 0);
   const lpGames = played.filter(g => g.lp != null && g.lp !== 0);
   return {
     n: played.length, w, l: played.length - w, wr: pct(w, played.length),
-    kda: ds ? (ks+as)/ds : (ks+as), k: ks, d: ds, a: as,
+    kda: ds ? (ks+as)/ds : (ks+as), k: ks, d: ds, a: as, nk: withK.length,
     cs: csl.length ? csl.reduce((a,b) => a+b, 0)/csl.length : null,
     vis: vis.length ? vis.reduce((a,b) => a+b, 0)/vis.length : null,
     lp, lpAvg: lpGames.length ? lp/lpGames.length : null,
@@ -1518,6 +1696,20 @@ function insights(games){
   if (withCs.length >= 10){ const last = withCs.slice(-5), prev = withCs.slice(-10, -5); const a = last.reduce((x,g) => x+csmin(g), 0)/5, b = prev.reduce((x,g) => x+csmin(g), 0)/5;
     if (a - b >= 0.5) out.push({cls:'good', ico:'i-stats', t:`CS/min en hausse : ${a.toFixed(1)} (contre ${b.toFixed(1)})`, p:`Ton farm progresse sur les 5 dernières games. C'est la stat la plus corrélée à la montée.`});
     else if (b - a >= 0.5) out.push({cls:'warn', ico:'i-stats', t:`CS/min en baisse : ${a.toFixed(1)} (contre ${b.toFixed(1)})`, p:`Retour à l'outil d'entraînement : 5 minutes de last-hit avant chaque session.`}); }
+  // objectif tenu
+  const gk = all.filter(g => g.goalOk != null || g.goalAuto != null).map(g => ({ ok: g.goalAuto != null ? g.goalAuto : g.goalOk, w: g.result === 'W' }));
+  const gOk = gk.filter(x => x.ok), gKo = gk.filter(x => !x.ok);
+  if (gOk.length >= 4 && gKo.length >= 4){ const a = pct(gOk.filter(x => x.w).length, gOk.length), b = pct(gKo.filter(x => x.w).length, gKo.length);
+    if (a - b >= 12) out.push({cls:'good', ico:'i-coach', t:`Objectif tenu = ${a} % de victoires (contre ${b} % sinon)`, p:`La preuve que ton objectif de session est le bon levier. Tiens-le, le résultat suit.`});
+    else if (gk.length >= 12) out.push({cls:'', ico:'i-coach', t:`Objectif tenu sur ${pct(gOk.length, gk.length)} % de tes games`, p:`Sans effet visible sur le winrate pour l'instant : peut-être un objectif trop facile. Monte d'un cran.`}); }
+  // morts précoces
+  const withFd = all.filter(g => g.fd != null || (g.d === 0 && g.k != null));
+  if (withFd.length >= 8){ const early = withFd.filter(g => g.fd != null && g.fd < 10).length; const r = pct(early, withFd.length);
+    if (r >= 40) out.push({cls:'bad', ico:'i-warn', t:`Tu meurs avant 10 min dans ${r} % de tes games`, p:`Une mort avant 10 min, c'est une lane perdue une fois sur deux. Objectif de session tout trouvé : « 0 mort avant 10 min ».`});
+    else if (r <= 15) out.push({cls:'good', ico:'i-check', t:`Lane propre : 1re mort avant 10 min dans seulement ${r} % des games`, p:`Ton early est solide. Le prochain levier est probablement le mid game (tempo, objectifs).`}); }
+  const allDeaths = all.flatMap(g => g.deaths || []);
+  if (allDeaths.length >= 10){ const byTag = {}; allDeaths.forEach(d => byTag[d.tag] = (byTag[d.tag]||0) + 1); const top = Object.entries(byTag).sort((a,b) => b[1]-a[1])[0]; const t = ERR_TAGS.find(x => x.id === top[0]);
+    if (t) out.push({cls:'warn', ico:'i-skull', t:`${pct(top[1], allDeaths.length)} % de tes morts : ${t.fr}`, p:t.tip}); }
   // série
   if (sum.streak.type === 'W' && sum.streak.n >= 3) out.push({cls:'good', ico:'i-flame', t:`Série de ${sum.streak.n} victoires`, p:`C'est là que la greed arrive. Même plan, même calme, même champion.`});
   if (sum.streak.type === 'L' && sum.streak.n >= 2) out.push({cls:'bad', ico:'i-warn', t:`${sum.streak.n} défaites d'affilée`, p:`Pause. Pas une game de plus tant que tu n'as pas pris 10 minutes et relu ta dernière leçon.`});
@@ -1575,7 +1767,7 @@ function lpChart(el, games, maxPts){
 function hbars(el, rows, opts={}){
   if (!rows.length){ el.innerHTML = `<div class="empty">${esc(opts.empty || 'Pas assez de données')}</div>`; return; }
   const max = opts.max || Math.max(...rows.map(r => r.value), 1);
-  el.innerHTML = rows.map(r => `<div class="hbar" title="${esc(r.title||'')}">
+  el.innerHTML = rows.map(r => `<div class="hbar ${opts.wide ? 'wide' : ''}" title="${esc(r.title||'')}">
     <div class="name">${r.icon || ''}<span>${esc(r.label)}</span></div>
     <div class="track"><div class="fill ${r.cls||''}" style="width:${Math.max(2, 100*r.value/max).toFixed(1)}%"></div></div>
     <div class="val">${esc(r.text)}</div></div>`).join('');
@@ -1588,7 +1780,7 @@ function tilesHTML(sum, extra){
   t.push({l:'Winrate', v: sum.n ? sum.wr + ' %' : '—', d: sum.n ? `${sum.w} V · ${sum.l} D` : 'aucune game'});
   const stk = sum.streak;
   t.push({l:'Série', v: stk.type ? (stk.type === 'W' ? 'V' : 'D') + stk.n : '—', d: stk.type === 'W' ? (stk.n >= 3 ? 'en feu' : 'victoire' + (stk.n > 1 ? 's' : '')) : stk.type === 'L' ? (stk.n >= 2 ? 'pause !' : 'défaite') : '', cls: stk.type === 'W' ? 'up' : stk.type === 'L' ? 'down' : ''});
-  t.push({l:'KDA', v: sum.n ? sum.kda.toFixed(2) : '—', d: sum.n ? `${(sum.k/sum.n).toFixed(1)} / ${(sum.d/sum.n).toFixed(1)} / ${(sum.a/sum.n).toFixed(1)}` : ''});
+  t.push({l:'KDA', v: sum.nk ? sum.kda.toFixed(2) : '—', d: sum.nk ? `${(sum.k/sum.nk).toFixed(1)} / ${(sum.d/sum.nk).toFixed(1)} / ${(sum.a/sum.nk).toFixed(1)}` : 'mode complet pour le KDA'});
   t.push({l:'CS / min', v: sum.cs != null ? sum.cs.toFixed(1) : '—', d: sum.cs != null ? (sum.cs >= 7 ? 'objectif atteint' : 'objectif : 7+') : 'renseigne CS + durée'});
   t.push({l:'Vision / min', v: sum.vis != null ? sum.vis.toFixed(2) : '—', d: sum.vis != null ? (sum.vis >= 1 ? 'bien' : 'objectif : 1+') : ''});
   t.push({l:'LP net', v: (sum.lp > 0 ? '+' : '') + sum.lp, d: sum.lpAvg != null ? `${sum.lpAvg > 0 ? '+' : ''}${sum.lpAvg.toFixed(1)} / game` : 'entre tes LP', cls: sum.lp > 0 ? 'up' : sum.lp < 0 ? 'down' : ''});
@@ -1643,7 +1835,9 @@ function renderHome(){
       <div class="tile"><div class="label">LP du jour</div><div class="value">${ts.lp > 0 ? '+' : ''}${ts.lp}</div><div class="delta"></div></div>
       <div class="tile"><div class="label">Jours d'affilée</div><div class="value">${run}</div><div class="delta">${run >= 3 ? 'régularité' : ''}</div></div>
     </div>
-    <p class="small" style="margin-top:10px">${S.session ? `<span class="badge teal">Session en cours</span> ${esc(S.session.goal)}` : (ts.n >= 5 ? 'Tu as fait tes games du jour. Une review vaut plus qu\'une 6e ranked.' : 'Pas de session en cours. Un objectif, un échauffement, 3 games max.')}</p>`;
+    <p class="small" style="margin-top:10px">${S.session ? `<span class="badge teal">Session en cours</span> ${esc(S.session.goal)}` : (ts.n >= 5 ? 'Tu as fait tes games du jour. Une review vaut plus qu\'une 6e ranked.' : 'Pas de session en cours. Un objectif, un échauffement, 3 games max.')}</p>
+    ${S.week && S.week.goal ? `<p class="small"><b>Objectif de la semaine :</b> ${esc(S.week.goal)}</p>` : ''}
+    ${[0, 1].includes(new Date().getDay()) ? `<p class="small"><a href="#" data-nav="coach">${svgUse('i-coach', 14)} Le bilan de la semaine t'attend dans Coach →</a></p>` : ''}`;
   // Worlds
   const now = Date.now(), w0 = new Date('2026-10-15T00:00:00').getTime(), w1 = new Date('2026-11-15T00:00:00').getTime();
   const dd = Math.ceil((w0 - now)/86400000);
@@ -1651,7 +1845,8 @@ function renderHome(){
 }
 
 /* ---------- SESSION ---------- */
-let form = { champ:null, role:null, result:null, tilt:null, err:null };
+let form = { champ:null, role:null, result:null, tilt:null, err:null, goalOk:null, deaths:[] };
+const EXPRESS_GOAL = 'Jouer propre, une game à la fois';
 let setup = { goal:null, mood:null, checks:{} };
 function coachPreMessage(){
   const g = gamesSorted().filter(x => x.result !== 'R'); if (!g.length) return 'Première session : le seul objectif, c\'est d\'enregistrer tes games honnêtement.';
@@ -1682,6 +1877,10 @@ function startSession(){
   S.session = { id: uid(), start: Date.now(), goal, mood: setup.mood, max: clamp(+$('#maxGames').value || 5, 1, 15), stopAfter: +$('#stopAfter').value || 2, games: [], lp: 0 };
   save(); renderSession(); toast('Session lancée. Bonne game.');
 }
+function startExpress(){
+  S.session = { id: uid(), start: Date.now(), goal: EXPRESS_GOAL, mood: null, max: 5, stopAfter: 2, express: true };
+  save(); renderSession(); toast('Session express lancée : V/D + LP, le reste est optionnel.');
+}
 function endSession(){
   const s = S.session; if (!s) return;
   const games = S.games.filter(g => g.session === s.id);
@@ -1690,7 +1889,7 @@ function endSession(){
     <div class="tile"><div class="label">Games</div><div class="value">${sum.n}</div><div class="delta">${sum.w} V · ${sum.l} D</div></div>
     <div class="tile"><div class="label">LP net</div><div class="value">${sum.lp > 0 ? '+' : ''}${sum.lp}</div><div class="delta"></div></div>
     <div class="tile"><div class="label">Durée</div><div class="value">${Math.round((Date.now()-s.start)/60000)} min</div><div class="delta"></div></div></div>
-    <p class="small" style="margin-top:10px"><b>Objectif :</b> ${esc(s.goal)}</p>
+    <p class="small" style="margin-top:10px"><b>Objectif :</b> ${esc(s.goal)}${(() => { const ok = games.filter(g => g.goalOk === true || g.goalAuto === true).length, ko = games.filter(g => g.goalOk === false || g.goalAuto === false).length; return ok + ko ? ` — tenu sur ${ok}/${ok+ko} game${ok+ko > 1 ? 's' : ''}` : ''; })()}</p>
     ${games.filter(g => g.lesson).length ? `<p class="small"><b>Leçons :</b></p><ul class="clean small">${games.filter(g => g.lesson).map(g => `<li>${esc(g.lesson)}</li>`).join('')}</ul>` : ''}`;
   let goalScore = null;
   $$('#summaryGoal .chip').forEach(c => { c.classList.remove('on'); c.onclick = () => { goalScore = +c.dataset.v; $$('#summaryGoal .chip').forEach(x => x.classList.toggle('on', x === c)); }; });
@@ -1715,6 +1914,15 @@ function renderSessionLive(){
   const games = S.games.filter(g => g.session === s.id).sort((a,b) => a.ts - b.ts);
   $('#liveDots').innerHTML = games.map(g => `<span class="${g.result}">${g.result === 'W' ? 'V' : g.result === 'L' ? 'D' : 'R'}</span>`).join('') || '<span class="tiny muted">aucune</span>';
   const lp = games.reduce((a,g) => a+(g.lp||0), 0); $('#liveLp').textContent = (lp > 0 ? '+' : '') + lp;
+  // mode express / complet
+  const mode = S.settings.formMode || 'express';
+  $$('#formModeChips .chip').forEach(c => { c.classList.toggle('on', c.dataset.v === mode); c.onclick = () => { S.settings.formMode = c.dataset.v; save(); renderSessionLive(); }; });
+  $('#formDetails').classList.toggle('hidden', mode === 'express');
+  $('#formHint').textContent = mode === 'express' ? 'Express : champion, résultat, LP, objectif tenu. Passe en « Complète » pour le KDA, le CS, la 1re mort et le journal des morts (ça nourrit les stats).' : 'Le journal des morts alimente « Morts par phase » et « Causes de mort » dans les stats. La 1re mort vérifie automatiquement l\'objectif « 0 mort avant 10 min ».';
+  const measurable = !!GOAL_CHECKS[s.goal];
+  $$('#goalOkChips .chip').forEach(c => { c.classList.toggle('on', form.goalOk === (c.dataset.v === '1')); c.onclick = () => { const v = c.dataset.v === '1'; form.goalOk = form.goalOk === v ? null : v; $$('#goalOkChips .chip').forEach(x => x.classList.toggle('on', form.goalOk === (x.dataset.v === '1'))); }; });
+  $('#goalOkChips').title = measurable ? 'Cet objectif est aussi vérifié automatiquement avec la 1re mort / le CS (mode complet).' : 'Auto-évaluation honnête : ' + s.goal;
+  renderDeathRows();
   // rôle par défaut
   if (!form.role) form.role = S.profile.mainRole || 'MID';
   $('#roleChips').innerHTML = ROLES.map(r => `<span class="chip ${form.role === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
@@ -1737,6 +1945,27 @@ function renderSessionLive(){
   else msg = `<div class="insight"><div class="ico">${svgUse('i-coach')}</div><div><b>Focus : ${esc(s.goal)}</b><p>Une seule chose à réussir cette game. Le reste, c'est du bonus.</p></div></div>`;
   $('#liveCoach').innerHTML = msg;
 }
+function renderDeathRows(){
+  const el = $('#deathRows');
+  el.innerHTML = form.deaths.map((d, i) => `<div class="frow-3 death-row" style="grid-template-columns:70px minmax(0,1fr) minmax(0,1fr) auto;gap:6px;align-items:center">
+    <input class="input" type="number" min="0" placeholder="min" value="${d.m ?? ''}" data-i="${i}" data-f="m" inputmode="numeric">
+    <select class="input" data-i="${i}" data-f="tag">${ERR_TAGS.filter(t => t.id !== 'team').map(t => `<option value="${t.id}" ${d.tag === t.id ? 'selected' : ''}>${esc(t.fr)}</option>`).join('')}</select>
+    <input class="input" placeholder="note (facultatif)" value="${esc(d.note||'')}" data-i="${i}" data-f="note">
+    <button type="button" class="btn xs ghost rmd" data-i="${i}" aria-label="retirer">✕</button></div>`).join('');
+  $$('input,select', el).forEach(x => x.addEventListener('change', () => { const d = form.deaths[+x.dataset.i]; if (!d) return; d[x.dataset.f] = x.dataset.f === 'm' ? (x.value === '' ? null : +x.value) : x.value; }));
+  $$('.rmd', el).forEach(b => b.addEventListener('click', () => { form.deaths.splice(+b.dataset.i, 1); renderDeathRows(); }));
+}
+function renderFicheReminder(){
+  const el = $('#ficheReminder'); if (!el) return;
+  const f = form.champ && S.fiches && S.fiches[form.champ];
+  if (!f || !(f.combos || f.plan || (f.matchups||[]).length || (f.spikes||[]).length)){ el.innerHTML = ''; return; }
+  el.innerHTML = `<details style="margin-top:8px"><summary><span>Fiche ${esc(champName(form.champ))} — rappel avant la game</span></summary><div class="body">
+    ${f.spikes && f.spikes.length ? `<p><b>Spikes :</b> ${f.spikes.map(esc).join(', ')}</p>` : ''}
+    ${f.combos ? `<p><b>Combos :</b> ${esc(f.combos)}</p>` : ''}
+    ${f.plan ? `<p><b>Plan de lane :</b> ${esc(f.plan)}</p>` : ''}
+    ${(f.matchups||[]).length ? `<p><b>Matchups :</b></p><ul class="clean small">${f.matchups.map(m => `<li><b>${esc(champName(m.champ))}</b> — ${esc(m.plan || 'pas de plan noté')}</li>`).join('')}</ul>` : ''}
+  </div></details>`;
+}
 function renderRecentChamps(){
   const recent = []; for (const g of gamesSorted().reverse()){ if (!recent.includes(g.champ)) recent.push(g.champ); if (recent.length >= 6) break; }
   const pool = (S.pool[form.role] || []).map(p => p.champ).filter(Boolean);
@@ -1746,9 +1975,10 @@ function renderRecentChamps(){
 }
 function renderChampSelected(){
   const el = $('#champSelected');
-  if (!form.champ){ el.classList.add('hidden'); return; }
+  if (!form.champ){ el.classList.add('hidden'); renderFicheReminder(); return; }
   el.classList.remove('hidden'); el.innerHTML = `${champIcon(form.champ)}<b>${esc(champName(form.champ))}</b><button class="btn xs ghost" type="button" id="champClear">changer</button>`;
   $('#champClear').onclick = () => { form.champ = null; renderChampSelected(); $('#champInput').focus(); };
+  renderFicheReminder();
 }
 function setupChampPicker(){
   const input = $('#champInput'), list = $('#champList'); let hl = 0, items = [];
@@ -1771,16 +2001,22 @@ function saveGame(){
   if (!form.result){ toast('Victoire ou défaite ?'); return; }
   const num = id => { const v = $(id).value.trim(); return v === '' ? null : +v; };
   const lp = num('#gLp');
+  const express = (S.settings.formMode || 'express') === 'express';
+  const deaths = express ? [] : form.deaths.filter(d => d.m != null).map(d => ({ m:+d.m, tag:d.tag || 'position', note:(d.note||'').trim() })).sort((a,b) => a.m - b.m);
+  let fd = express ? null : num('#gFd'); if (deaths.length) fd = deaths[0].m;
+  let d = express ? null : num('#gD'); if (d == null && deaths.length) d = deaths.length; if (d == null && !express && fd == null && $('#gK').value !== '') d = 0;
   const g = { id: uid(), ts: Date.now(), session: s.id, n: S.games.filter(x => x.session === s.id).length + 1, champ: form.champ, role: form.role, result: form.result,
-    k: num('#gK'), d: num('#gD'), a: num('#gA'), dur: num('#gDur'), cs: num('#gCs'), vis: num('#gVis'), lp: form.result === 'R' ? 0 : lp, mood: s.mood, tilt: form.tilt, err: form.err, lesson: $('#gLesson').value.trim() };
+    k: express ? null : num('#gK'), d, a: express ? null : num('#gA'), dur: express ? null : num('#gDur'), cs: express ? null : num('#gCs'), vis: express ? null : num('#gVis'), lp: form.result === 'R' ? 0 : lp, mood: s.mood, tilt: express ? null : form.tilt, err: express ? null : form.err, lesson: express ? '' : $('#gLesson').value.trim(),
+    fd, deaths, goalOk: form.goalOk, goal: s.goal, express };
+  g.goalAuto = goalCheck(s.goal, g);
   const labelBefore = rankLabel(S.rank), absBefore = rankAbs(S.rank);
   if (g.lp) applyLp(g.lp);
   g.abs = rankAbs(S.rank);
   const rankMsg = labelBefore !== rankLabel(S.rank) ? ((g.abs > absBefore ? 'PROMOTION : ' : 'Rétrogradation : ') + rankLabel(S.rank)) : null;
   S.games.push(g); save();
   // reset formulaire
-  ['#gK','#gD','#gA','#gDur','#gCs','#gVis','#gLp','#gLesson'].forEach(id => $(id).value = '');
-  const keepChamp = form.champ; form = { champ: keepChamp, role: form.role, result:null, tilt:null, err:null };
+  ['#gK','#gD','#gA','#gDur','#gCs','#gVis','#gLp','#gLesson','#gFd'].forEach(id => $(id).value = '');
+  const keepChamp = form.champ; form = { champ: keepChamp, role: form.role, result:null, tilt:null, err:null, goalOk:null, deaths:[] };
   renderRankChip(); renderSession();
   const games = S.games.filter(x => x.session === s.id).filter(x => x.result !== 'R');
   const st = streak(games);
@@ -1796,7 +2032,7 @@ function gameHTML(g){
   return `<div class="game ${g.result}" data-id="${g.id}">
     ${champIcon(g.champ)}
     <div><div><span class="res">${g.result === 'W' ? 'VICTOIRE' : g.result === 'L' ? 'DÉFAITE' : 'REMAKE'}</span> <b>${esc(champName(g.champ))}</b> <span class="tiny muted">${esc((ROLES.find(r => r.id === g.role)||{}).fr || '')} · ${esc(fmtDateTime(g.ts))}</span></div>
-      <div class="meta">${g.k != null ? `${g.k}/${g.d ?? 0}/${g.a ?? 0} · KDA ${kda(g).toFixed(1)}` : ''}${cs != null ? ` · ${cs.toFixed(1)} CS/min` : ''}${g.vis != null && g.dur ? ` · ${(g.vis/g.dur).toFixed(1)} vision/min` : ''}${g.tilt ? ` · tilt ${g.tilt}/5` : ''} ${tag ? `<span class="tag">${esc(tag.fr)}</span>` : ''}</div>
+      <div class="meta">${g.k != null ? `${g.k}/${g.d ?? 0}/${g.a ?? 0} · KDA ${kda(g).toFixed(1)}` : ''}${cs != null ? ` · ${cs.toFixed(1)} CS/min` : ''}${g.vis != null && g.dur ? ` · ${(g.vis/g.dur).toFixed(1)} vision/min` : ''}${g.tilt ? ` · tilt ${g.tilt}/5` : ''}${g.fd != null ? ` · 1re mort ${g.fd} min` : (g.d === 0 && g.k != null ? ' · 0 mort' : '')} ${tag ? `<span class="tag">${esc(tag.fr)}</span>` : ''}${g.goalAuto === true || g.goalOk === true ? `<span class="tag" style="color:var(--win)">objectif ✓</span>` : (g.goalAuto === false || g.goalOk === false) ? `<span class="tag" style="color:var(--loss)">objectif ✗</span>` : ''}</div>
       ${g.lesson ? `<div class="lesson">« ${esc(g.lesson)} »</div>` : ''}</div>
     <div style="text-align:right"><div class="lp ${g.lp > 0 ? '' : ''}">${g.lp != null ? (g.lp > 0 ? '+' : '') + g.lp + ' LP' : ''}</div><button class="btn xs ghost del" title="Supprimer" aria-label="Supprimer">${svgUse('i-trash', 14)}</button></div></div>`;
 }
@@ -1850,8 +2086,25 @@ function renderStats(){
   $$('#statsRole .chip').forEach(c => c.onclick = () => { statsFilter.role = c.dataset.v; renderStats(); });
   const games = filteredGames();
   const sum = summarize(games);
-  $('#statsTiles').innerHTML = tilesHTML(sum);
+  const gk = games.filter(g => g.result !== 'R' && (g.goalOk != null || g.goalAuto != null));
+  const gOk = gk.filter(g => (g.goalAuto != null ? g.goalAuto : g.goalOk)).length;
+  const fdG = games.filter(g => g.fd != null || (g.d === 0 && g.k != null));
+  const early = fdG.filter(g => g.fd != null && g.fd < 10).length;
+  $('#statsTiles').innerHTML = tilesHTML(sum, [
+    {l:'Objectif tenu', v: gk.length ? pct(gOk, gk.length) + ' %' : '—', d: gk.length ? `${gOk}/${gk.length} games` : 'réponds « objectif tenu ? »', cls: gk.length && pct(gOk, gk.length) >= 60 ? 'up' : ''},
+    {l:'Mort avant 10 min', v: fdG.length ? pct(early, fdG.length) + ' %' : '—', d: fdG.length ? `${early}/${fdG.length} games` : 'renseigne la 1re mort', cls: fdG.length && pct(early, fdG.length) >= 40 ? 'down' : ''},
+  ]);
   lpChart($('#lpChartStats'), games, 0);
+  // journal des morts
+  const deaths = games.flatMap(g => (g.deaths || []).map(d => ({...d, g})));
+  const phase = m => m < 10 ? '0–10 min' : m < 20 ? '10–20 min' : m < 30 ? '20–30 min' : '30 min +';
+  const PH = ['0–10 min','10–20 min','20–30 min','30 min +'];
+  const byPhase = {}; deaths.forEach(d => byPhase[phase(d.m)] = (byPhase[phase(d.m)]||0) + 1);
+  hbars($('#deathPhaseBars'), PH.filter(p => byPhase[p]).map(p => ({ label:p, value:byPhase[p], text:`${byPhase[p]} mort${byPhase[p] > 1 ? 's' : ''}`, cls:'loss' })), {empty:'Remplis le journal des morts (mode complet)'});
+  const byCause = {}; deaths.forEach(d => byCause[d.tag] = (byCause[d.tag]||0) + 1);
+  hbars($('#deathCauseBars'), Object.entries(byCause).sort((a,b) => b[1]-a[1]).map(([k, v]) => { const t = ERR_TAGS.find(x => x.id === k) || {fr:k}; return { label:t.fr, value:v, text:`${v} mort${v > 1 ? 's' : ''}`, cls:'loss', title:t.tip }; }), {empty:'Remplis le journal des morts (mode complet)'});
+  const byGoal = {}; gk.forEach(g => { const k = g.goal || '—'; byGoal[k] = byGoal[k] || {g:0, ok:0}; byGoal[k].g++; if (g.goalAuto != null ? g.goalAuto : g.goalOk) byGoal[k].ok++; });
+  hbars($('#goalBars'), Object.entries(byGoal).sort((a,b) => b[1].g - a[1].g).map(([k, v]) => ({ label:k, value:pct(v.ok, v.g), text:`${pct(v.ok, v.g)} % (${v.g})`, cls: pct(v.ok, v.g) >= 60 ? 'win' : 'loss', title:`${v.ok} tenu / ${v.g}` })), {max:100, wide:true, empty:'Réponds « objectif tenu ? » après chaque game'});
   const champs = groupWR(games, g => g.champ).sort((a,b) => b.g - a.g || b.wr - a.wr).slice(0, 10);
   hbars($('#champBars'), wrRows(champs, champName, id => champIcon(id, 'sm')), {max:100, empty:'Aucune game sur la période'});
   const errs = groupWR(games.filter(g => g.err), g => g.err).sort((a,b) => b.g - a.g);
@@ -1908,7 +2161,7 @@ function renderClock(){
 const LANES = [['TOP','Top'],['JGL','Jungle'],['MID','Mid'],['ADC','ADC'],['SUP','Support']];
 function defaultSpells(){ return LANES.map(l => ({ lane:l[0], s2: l[0] === 'JGL' ? 'SMI' : l[0] === 'TOP' ? 'TP' : l[0] === 'ADC' ? 'HEAL' : 'IGN', f:null, s:null })); }
 function haste(){ return (S.haste.lucidity ? 10 : 0) + (S.haste.cosmic ? 18 : 0); }
-function spellCd(id){ const sp = SPELLS.find(x => x.id === id) || SPELLS[0]; return sp.cd / (1 + haste()/100); }
+function spellCd(id){ const base = PV('cd_' + id) || (SPELLS.find(x => x.id === id) || SPELLS[0]).cd; return base / (1 + haste()/100); }
 function toggleSpell(i, slot){
   S.spells = S.spells || defaultSpells();
   const row = S.spells[i]; const id = slot === 'f' ? 'F' : row.s2;
@@ -1956,19 +2209,25 @@ function tickSpells(){
 }
 
 /* ---------- objectifs ---------- */
-const OBJ_DEFS = [
-  {id:'dragon', name:'Dragon', icon:'i-dragon', first:300, respawn:300, major:true},
-  {id:'grubs', name:'Voidgrubs', icon:'i-bug', first:480, until:885, once:true, major:true},
-  {id:'herald', name:'Rift Herald', icon:'i-eye', first:900, until:1185, once:true, major:true},
-  {id:'baron', name:'Baron Nashor', icon:'i-skull', first:1200, respawn:360, major:true},
-  {id:'elder', name:'Elder Dragon', icon:'i-elder', first:null, respawn:360, major:true},
-  {id:'scuttleTop', name:'Crabe top', icon:'i-crab', first:175, respawn:150},
-  {id:'scuttleBot', name:'Crabe bot', icon:'i-crab', first:175, respawn:150},
-  {id:'blueA', name:'Bleu allié', icon:'i-buff', first:55, respawn:300},
-  {id:'redA', name:'Rouge allié', icon:'i-buff', first:55, respawn:300},
-  {id:'blueE', name:'Bleu ennemi', icon:'i-buff', first:55, respawn:300},
-  {id:'redE', name:'Rouge ennemi', icon:'i-buff', first:55, respawn:300},
+const OBJ_BASE = [
+  {id:'dragon', name:'Dragon', icon:'i-dragon', first:'dragonFirst', respawn:'dragonRespawn', major:true},
+  {id:'grubs', name:'Voidgrubs', icon:'i-bug', first:'grubsFirst', until:'grubsUntil', once:true, major:true},
+  {id:'herald', name:'Rift Herald', icon:'i-eye', first:'heraldFirst', until:'heraldUntil', once:true, major:true},
+  {id:'baron', name:'Baron Nashor', icon:'i-skull', first:'baronFirst', respawn:'baronRespawn', major:true},
+  {id:'elder', name:'Elder Dragon', icon:'i-elder', first:null, respawn:'elderRespawn', major:true},
+  {id:'scuttleTop', name:'Crabe top', icon:'i-crab', first:'scuttleFirst', respawn:'scuttleRespawn'},
+  {id:'scuttleBot', name:'Crabe bot', icon:'i-crab', first:'scuttleFirst', respawn:'scuttleRespawn'},
+  {id:'blueA', name:'Bleu allié', icon:'i-buff', first:'campFirst', respawn:'buffRespawn'},
+  {id:'redA', name:'Rouge allié', icon:'i-buff', first:'campFirst', respawn:'buffRespawn'},
+  {id:'blueE', name:'Bleu ennemi', icon:'i-buff', first:'campFirst', respawn:'buffRespawn'},
+  {id:'redE', name:'Rouge ennemi', icon:'i-buff', first:'campFirst', respawn:'buffRespawn'},
 ];
+let OBJ_DEFS = [];
+function buildObjDefs(){
+  OBJ_DEFS = OBJ_BASE.map(d => ({ ...d, first: d.first ? PV(d.first) : null, respawn: d.respawn ? PV(d.respawn) : null, until: d.until ? PV(d.until) : null }));
+  if (S.obj) for (const d of OBJ_DEFS){ const o = S.obj[d.id]; if (o && o.taken === 0 && !o.dead) o.next = d.first; }
+}
+buildObjDefs();
 function defaultObj(){ const o = {}; for (const d of OBJ_DEFS) o[d.id] = { next: d.first, taken: 0, dead: false, alerted: false }; return o; }
 function objTake(id){
   S.obj = S.obj || defaultObj(); const d = OBJ_DEFS.find(x => x.id === id), o = S.obj[id]; const t = gameSeconds();
@@ -1980,7 +2239,7 @@ function objTake(id){
 }
 function objSoul(){
   S.obj = S.obj || defaultObj(); const t = gameSeconds();
-  S.obj.elder.next = t + 360; S.obj.elder.alerted = false; S.obj.dragon.dead = true; S.obj.dragon.next = null; save(); renderObjectives(); toast('Elder Dragon dans 6:00');
+  S.obj.elder.next = t + PV('elderRespawn'); S.obj.elder.alerted = false; S.obj.dragon.dead = true; S.obj.dragon.next = null; save(); renderObjectives(); toast('Elder Dragon dans ' + mmss(PV('elderRespawn')));
 }
 function objStatus(d, o, t){
   if (o.dead) return { cls:'gone', txt:'—', sub: d.id === 'dragon' ? 'Âme prise → Elder' : 'Parti' };
@@ -2013,12 +2272,37 @@ setInterval(tick, 500);
 
 /* ---------- cheat-sheets ---------- */
 function renderCheatsheets(){
-  $('#timelineBox').innerHTML = TIMELINE_2026.map(t => `<div class="tl"><b>${esc(t.t)}</b><span>${t.s}</span></div>`).join('');
-  $('#jungleTable').innerHTML = `<colgroup><col style="width:48%"><col style="width:26%"><col style="width:26%"></colgroup><tr><th>Camp</th><th>1er spawn</th><th>Respawn</th></tr>` + JUNGLE_TABLE.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="num">${esc(r[2])}</td></tr>`).join('');
-  $('#spellTable').innerHTML = `<colgroup><col style="width:27%"><col style="width:15%"><col style="width:58%"></colgroup><tr><th>Sort</th><th>CD</th><th>Note</th></tr>` + SPELL_TABLE_NOTES.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="tiny muted">${esc(r[2])}</td></tr>`).join('');
+  const m = k => mmss(PV(k));
+  const timeline = [
+    {t:m('minions'), s:'Spawn des sbires (arrivée en lane ~35 s plus tard)'},
+    {t:m('campFirst'), s:'Spawn de tous les camps de jungle (buffs, gromp, loups, raptors, krugs)'},
+    {t:m('scuttleFirst'), s:`Scuttle (crabe) dans les deux rivières · respawn ${m('scuttleRespawn')}`},
+    {t:m('dragonFirst'), s:`Premier dragon élémentaire · respawn ${m('dragonRespawn')} après chaque kill`},
+    {t:m('grubsFirst'), s:`Voidgrubs (3 larves, une seule fois) · disparaissent à ${m('grubsUntil')}`},
+    {t:m('heraldFirst'), s:`Rift Herald · disparaît à ${m('heraldUntil')} · l'Œil se garde 4 min`},
+    {t:m('baronFirst'), s:`Baron Nashor · respawn ${m('baronRespawn')} · buff 3 min`},
+    {t:'4e dragon', s:`Âme du dragon pour l'équipe · l'Elder spawn ${m('elderRespawn')} après, puis toutes les ${m('elderRespawn')} · exécute sous 20 % PV`},
+  ];
+  $('#timelineBox').innerHTML = timeline.map(t => `<div class="tl"><b>${esc(t.t)}</b><span>${t.s}</span></div>`).join('');
+  const jungle = [
+    ['Buff bleu / rouge', m('campFirst'), m('buffRespawn')], ['Gromp, loups, raptors, krugs', m('campFirst'), m('campRespawn')], ['Scuttle (rivière)', m('scuttleFirst'), m('scuttleRespawn')],
+    ['Voidgrubs', m('grubsFirst'), `— (${m('grubsUntil')} fin)`], ['Rift Herald', m('heraldFirst'), `— (${m('heraldUntil')} fin)`], ['Dragon', m('dragonFirst'), m('dragonRespawn')], ['Baron', m('baronFirst'), m('baronRespawn')], ['Elder', 'après l\'âme', m('elderRespawn')],
+  ];
+  $('#jungleTable').innerHTML = `<colgroup><col style="width:48%"><col style="width:26%"><col style="width:26%"></colgroup><tr><th>Camp</th><th>1er spawn</th><th>Respawn</th></tr>` + jungle.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="num">${esc(r[2])}</td></tr>`).join('');
+  const f = PV('cd_F');
+  const spells = [
+    ['Flash', m('cd_F'), `≈${mmss(f/1.10)} avec Ionian · ≈${mmss(f/1.18)} avec Cosmic · ≈${mmss(f/1.28)} les deux`],
+    ['Téléport', m('cd_TP'), 'Unleashed après 10:00 : 5:00 → 3:30 selon le niveau. Quête top : TP gratuit 6:30'],
+    ['Ignite', m('cd_IGN'), 'Vrais dégâts + anti-soin'], ['Exhaust', m('cd_EXH'), '−35 % dégâts, −40 % vitesse'], ['Heal', m('cd_HEAL'), 'Soin + vitesse, réduit par Ignite'],
+    ['Barrière', m('cd_BAR'), 'Bouclier 2 s'], ['Cleanse', m('cd_CLE'), 'Retire les CC (sauf airborne, suppression)'], ['Ghost', m('cd_GHO'), 'Vitesse 10 s, ignore les collisions'], ['Smite', m('cd_SMI'), 'Recharge (2 charges), réduite par la haste d\'invocateur'],
+  ];
+  $('#spellTable').innerHTML = `<colgroup><col style="width:27%"><col style="width:15%"><col style="width:58%"></colgroup><tr><th>Sort</th><th>CD</th><th>Note</th></tr>` + spells.map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(r[1])}</td><td class="tiny muted">${esc(r[2])}</td></tr>`).join('');
   $('#waveRules').innerHTML = WAVE_RULES.map(r => `<li>${r}</li>`).join('');
   $('#newsRules').innerHTML = NEWS_2026.map(r => `<li>${r}</li>`).join('');
   $('#benchTable').innerHTML = `<colgroup><col style="width:24%"><col style="width:17%"><col style="width:15%"><col style="width:18%"><col style="width:26%"></colgroup><tr><th>Niveau</th><th>CS/min</th><th>Morts</th><th>Vision</th><th>Focus</th></tr>` + BENCH.map(r => `<tr>${r.map((c, i) => `<td class="${i === 4 ? 'tiny muted' : ''}">${esc(c)}</td>`).join('')}</tr>`).join('');
+  const over = Object.keys(S.settings.overrides || {}).filter(k => S.settings.overrides[k] != null && S.settings.overrides[k] !== '').length;
+  $('#cheatNote').textContent = `Chiffres vérifiés patch ${PATCH_VERIFIED}${over ? ` · ${over} valeur${over > 1 ? 's' : ''} modifiée${over > 1 ? 's' : ''} dans les réglages` : ' · modifiables dans les réglages'}`;
+  $('#spellNote').textContent = `Flash ${m('cd_F')} · Ignite ${m('cd_IGN')} · TP ${m('cd_TP')} (Unleashed 5:00→3:30 selon le niveau) · Exhaust / Heal / Cleanse / Ghost ${m('cd_EXH')} · Barrière ${m('cd_BAR')} · Smite ${m('cd_SMI')}. Le texte de chat est copié automatiquement (ex : « mid flash 12:35 »).`;
 }
 function renderTools(){ renderClock(); renderSpells(); renderObjectives(); }
 
@@ -2046,7 +2330,13 @@ function isoWeekKey(d = new Date()){
 }
 function levelFromRank(){ const ti = S.rank.tier ? tierIdx(S.rank.tier) : 2; return ti <= 1 ? 'low' : ti <= 3 ? 'mid' : ti <= 5 ? 'high' : 'top'; }
 function renderWeek(){
-  const key = isoWeekKey(); if (S.week.key !== key){ S.week = { key, done:{} }; save(); }
+  const key = isoWeekKey();
+  if (S.week.key !== key){
+    if (S.week.key){ S.weeks = S.weeks || {}; S.weeks[S.week.key] = { goal:S.week.goal || '', done:Object.values(S.week.done || {}).filter(Boolean).length, total:WEEK_PLAN.reduce((a, d) => a + d.items.length, 0) }; }
+    S.week = { key, done:{}, goal:'' }; save();
+  }
+  $('#weekGoal').value = S.week.goal || '';
+  $('#weekGoal').onchange = () => { S.week.goal = $('#weekGoal').value.trim(); save(); renderWeekReport(); };
   $('#weekLabel').textContent = 'Semaine ' + key.split('-W')[1];
   const todayIdx = (new Date().getDay() + 6) % 7;
   const total = WEEK_PLAN.reduce((a, d) => a + d.items.length, 0), done = Object.values(S.week.done).filter(Boolean).length;
@@ -2095,6 +2385,160 @@ function renderPool(){
   const roleQ = { TOP:'top', JUNGLE:'jungle', MID:'mid', ADC:'adc', SUPPORT:'support' }[coachSel.poolRole];
   $('#tierLinks').innerHTML = `<a class="btn xs" target="_blank" rel="noopener" href="https://u.gg/lol/tier-list?role=${roleQ}">Tierlist u.gg</a><a class="btn xs" target="_blank" rel="noopener" href="https://www.op.gg/champions?position=${roleQ}">Tierlist OP.GG</a><a class="btn xs" target="_blank" rel="noopener" href="https://lolalytics.com/lol/tierlist/?lane=${roleQ === 'adc' ? 'bottom' : roleQ}">Lolalytics</a>`;
 }
+/* bilan hebdo */
+let reportOffset = 0;
+function weekRange(offset){ const d = new Date(); d.setHours(0,0,0,0); const dow = (d.getDay() + 6) % 7; d.setDate(d.getDate() - dow - 7*offset); const start = d.getTime(); return { start, end: start + 7*86400000, key: isoWeekKey(new Date(start)) }; }
+function weekStats(offset){
+  const r = weekRange(offset); const games = gamesSorted().filter(g => g.ts >= r.start && g.ts < r.end); const sum = summarize(games);
+  const played = games.filter(g => g.result !== 'R');
+  const errs = {}; played.filter(g => g.result === 'L' && g.err).forEach(g => errs[g.err] = (errs[g.err]||0) + 1);
+  const topErr = Object.entries(errs).sort((a,b) => b[1]-a[1])[0];
+  const champs = groupWR(played, g => g.champ).filter(c => c.g >= 2).sort((a,b) => b.wr - a.wr || b.g - a.g);
+  const gk = played.filter(g => g.goalOk != null || g.goalAuto != null); const gOk = gk.filter(g => (g.goalAuto != null ? g.goalAuto : g.goalOk)).length;
+  const night = played.filter(g => { const h = new Date(g.ts).getHours(); return h >= 23 || h < 6; }).length;
+  const sessions = S.sessions.filter(x => x.start >= r.start && x.start < r.end);
+  const longSessions = sessions.filter(x => x.n >= 5).length;
+  const early = played.filter(g => g.fd != null && g.fd < 10).length, withFd = played.filter(g => g.fd != null || (g.d === 0 && g.k != null)).length;
+  return { ...r, games, sum, topErr, best: champs[0], worst: champs.length > 1 ? champs[champs.length-1] : null, gk: gk.length, gOk, night, sessions: sessions.length, longSessions, early, withFd, days: new Set(played.map(g => dayKey(g.ts))).size };
+}
+function renderWeekReport(){
+  $$('#reportWeekChips .chip').forEach(c => { c.classList.toggle('on', +c.dataset.v === reportOffset); c.onclick = () => { reportOffset = +c.dataset.v; renderWeekReport(); }; });
+  const w = weekStats(reportOffset), prev = weekStats(reportOffset + 1); const s = w.sum;
+  const plan = reportOffset === 0 ? { goal:S.week.goal || '', done:Object.values(S.week.done || {}).filter(Boolean).length, total:WEEK_PLAN.reduce((a, d) => a + d.items.length, 0) } : ((S.weeks || {})[w.key] || null);
+  const label = reportOffset === 0 ? 'cette semaine' : 'la semaine dernière';
+  if (!s.n){ $('#weekReport').innerHTML = `<div class="empty"><b>Aucune game ${label}</b>${reportOffset === 0 ? 'Le bilan se remplit au fil des games. Rendez-vous dimanche.' : 'Rien à analyser.'}</div>${plan && plan.goal ? `<p class="small"><b>Objectif de la semaine :</b> ${esc(plan.goal)}</p>` : ''}`; return; }
+  const delta = (a, b, unit='', dec=0) => (a == null || b == null) ? '' : `${a - b >= 0 ? '+' : ''}${(a - b).toFixed(dec)}${unit} vs sem. préc.`;
+  const verdict = [];
+  if (s.lp > 0 && s.wr >= 55) verdict.push(`<strong>Semaine positive</strong> : ${s.wr} % de victoires et ${s.lp > 0 ? '+' : ''}${s.lp} LP. Le plan marche, on ne change rien.`);
+  else if (s.lp < 0) verdict.push(`<strong>Semaine dans le rouge</strong> (${s.lp} LP). ${w.topErr ? `Ta première cause de défaite : <strong>${esc((ERR_TAGS.find(e => e.id === w.topErr[0])||{}).fr || w.topErr[0])}</strong> (${w.topErr[1]} games) — c'est ton objectif de la semaine prochaine.` : 'Tague tes erreurs principales pour que le coach puisse pointer la cause.'}`);
+  else verdict.push(`<strong>Semaine neutre</strong> : ${s.wr} % de victoires. Tu tiens ton rang ; pour monter, il faut un levier — regarde la colonne « à corriger ».`);
+  if (w.night >= 3) verdict.push(`${w.night} games entre 23h et 6h. Compare ton winrate de nuit dans les stats avant d'en refaire.`);
+  if (w.longSessions) verdict.push(`${w.longSessions} session${w.longSessions > 1 ? 's' : ''} de 5 games ou plus : garde les blocs courts, ton cerveau décroche.`);
+  if (w.withFd >= 4 && w.early / w.withFd >= 0.4) verdict.push(`Mort avant 10 min dans ${pct(w.early, w.withFd)} % des games : lane instable, focus « 0 mort avant 10 min ».`);
+  if (prev.sum.n >= 3 && s.cs != null && prev.sum.cs != null && s.cs - prev.sum.cs >= 0.4) verdict.push(`CS/min en hausse (${s.cs.toFixed(1)} contre ${prev.sum.cs.toFixed(1)}) : le farm progresse, continue l'échauffement.`);
+  if (w.gk >= 4 && w.gOk / w.gk >= 0.7) verdict.push(`Objectif de session tenu ${pct(w.gOk, w.gk)} % du temps : bravo, choisis un objectif plus exigeant.`);
+  if (plan && plan.total && plan.done / plan.total < 0.3 && reportOffset === 1) verdict.push(`Plan de la semaine suivi à ${pct(plan.done, plan.total)} %. Ce n'est pas grave, mais ne coche que ce que tu comptes faire.`);
+  $('#weekReport').innerHTML = `
+    <div class="tiles" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+      <div class="tile"><div class="label">Games</div><div class="value">${s.n}</div><div class="delta">${s.w} V · ${s.l} D · ${w.days} jour${w.days > 1 ? 's' : ''}</div></div>
+      <div class="tile"><div class="label">Winrate</div><div class="value">${s.wr} %</div><div class="delta ${prev.sum.n ? (s.wr >= prev.sum.wr ? 'up' : 'down') : ''}">${prev.sum.n ? delta(s.wr, prev.sum.wr, ' pts') : ''}</div></div>
+      <div class="tile"><div class="label">LP net</div><div class="value">${s.lp > 0 ? '+' : ''}${s.lp}</div><div class="delta ${s.lp > 0 ? 'up' : s.lp < 0 ? 'down' : ''}">${prev.sum.n ? delta(s.lp, prev.sum.lp, ' LP') : ''}</div></div>
+      <div class="tile"><div class="label">CS / min</div><div class="value">${s.cs != null ? s.cs.toFixed(1) : '—'}</div><div class="delta">${s.cs != null && prev.sum.cs != null ? delta(s.cs, prev.sum.cs, '', 1) : ''}</div></div>
+      <div class="tile"><div class="label">Objectif tenu</div><div class="value">${w.gk ? pct(w.gOk, w.gk) + ' %' : '—'}</div><div class="delta">${w.gk ? `${w.gOk}/${w.gk} games` : ''}</div></div>
+      <div class="tile"><div class="label">Plan suivi</div><div class="value">${plan && plan.total ? pct(plan.done, plan.total) + ' %' : '—'}</div><div class="delta">${plan && plan.total ? `${plan.done}/${plan.total} cases` : ''}</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:12px">
+      <div class="insight"><div class="ico">${svgUse('i-coach')}</div><div><b>Le débrief du coach</b>${verdict.map(v => `<p>${v}</p>`).join('')}</div></div>
+      <div>
+        <ul class="clean small">
+          ${plan && plan.goal ? `<li><b>Objectif de la semaine :</b> ${esc(plan.goal)}</li>` : (reportOffset === 0 ? '<li><b>Objectif de la semaine :</b> pas encore défini (juste en dessous).</li>' : '')}
+          ${w.best ? `<li><b>Meilleur champion :</b> ${esc(champName(w.best.key))} — ${w.best.wr} % sur ${w.best.g} games</li>` : ''}
+          ${w.worst && w.worst.wr < 50 ? `<li><b>À laisser de côté :</b> ${esc(champName(w.worst.key))} — ${w.worst.wr} % sur ${w.worst.g} games</li>` : ''}
+          ${w.topErr ? `<li><b>À corriger :</b> ${esc((ERR_TAGS.find(e => e.id === w.topErr[0])||{}).fr || w.topErr[0])} (${w.topErr[1]} défaites)</li>` : ''}
+          <li><b>Sessions :</b> ${w.sessions}${w.longSessions ? ` dont ${w.longSessions} longue${w.longSessions > 1 ? 's' : ''}` : ''}</li>
+          ${w.games.filter(g => g.lesson).length ? `<li><b>Leçons notées :</b> ${w.games.filter(g => g.lesson).slice(-3).map(g => `« ${esc(g.lesson)} »`).join(' · ')}</li>` : ''}
+        </ul>
+      </div>
+    </div>`;
+}
+
+/* picker générique (input + liste) */
+function attachPicker(input, list, onPick, limit=6){
+  if (!input || !list) return;
+  const show = () => { const items = findChamps(input.value, limit); list.innerHTML = items.map(c => `<button type="button" data-id="${c[0]}">${champIcon(c[0], 'sm')}<span>${esc(c[1])}</span></button>`).join(''); list.classList.toggle('hidden', !items.length); };
+  input.oninput = show; input.onfocus = show;
+  input.onkeydown = e => { if (e.key === 'Enter'){ const items = findChamps(input.value, 1); if (items[0]){ e.preventDefault(); input.value = ''; list.classList.add('hidden'); onPick(items[0][0]); } } else if (e.key === 'Escape') list.classList.add('hidden'); };
+  list.onmousedown = e => { const b = e.target.closest('button'); if (!b) return; e.preventDefault(); input.value = ''; list.classList.add('hidden'); onPick(b.dataset.id); };
+}
+
+/* fiches champion */
+let ficheSel = null;
+function ficheChamps(){ const ids = []; ROLES.forEach(r => (S.pool[r.id]||[]).forEach(p => ids.push(p.champ))); Object.keys(S.fiches || {}).forEach(id => { const f = S.fiches[id]; if (f && (f.combos || f.plan || f.build || (f.spikes||[]).length || (f.matchups||[]).length)) ids.push(id); }); gamesSorted().slice(-10).forEach(g => ids.push(g.champ)); return [...new Set(ids)]; }
+function renderFiches(){
+  attachPicker($('#ficheInput'), $('#ficheList'), id => { ficheSel = id; renderFiches(); });
+  const quick = ficheChamps().slice(0, 12);
+  $('#ficheQuick').innerHTML = quick.map(id => `<span class="rc" data-id="${id}" style="cursor:pointer;${ficheSel === id ? 'outline:2px solid var(--gold);border-radius:50%' : ''}">${champIcon(id)}</span>`).join('');
+  $$('#ficheQuick .rc').forEach(x => x.onclick = () => { ficheSel = x.dataset.id; renderFiches(); });
+  const body = $('#ficheBody');
+  if (!ficheSel){ body.innerHTML = `<div class="empty"><b>Choisis un champion</b>Ton pool et tes derniers champions sont juste au-dessus. Une fiche = ce que tu relis pendant le chargement.</div>`; return; }
+  const f = fiche(ficheSel), L = champLinks(ficheSel);
+  body.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${champIcon(ficheSel, 'xl')}<div><h3 style="font-size:1.3rem">${esc(champName(ficheSel))}</h3>
+      <div class="btn-row" style="margin-top:6px"><a class="btn xs" target="_blank" rel="noopener" href="${L.ugg}">Build u.gg</a><a class="btn xs" target="_blank" rel="noopener" href="${L.lola}">Lolalytics</a><a class="btn xs" target="_blank" rel="noopener" href="${L.opgg}">OP.GG</a><a class="btn xs" target="_blank" rel="noopener" href="${L.uggMu}">Matchups u.gg</a></div></div></div>
+    <label class="field" style="margin-top:12px">Power spikes</label>
+    <div class="chips" id="ficheSpikes">${SPIKES.map(sp => `<span class="chip ${f.spikes.includes(sp) ? 'on' : ''}" data-v="${esc(sp)}">${esc(sp)}</span>`).join('')}</div>
+    <div class="grid grid-2" style="margin-top:10px">
+      <div><label class="field">Combos (dans l'ordre)</label><textarea class="input" id="ficheCombos" placeholder="Ex : E → Q → AA → W → R. Trade court : Q + AA puis recule.">${esc(f.combos)}</textarea></div>
+      <div><label class="field">Build de base &amp; runes</label><textarea class="input" id="ficheBuild" placeholder="Ex : Eclipse → Bottes → Black Cleaver. Conquérant + Triomphe…">${esc(f.build)}</textarea></div>
+    </div>
+    <label class="field" style="margin-top:10px">Plan de lane par défaut</label>
+    <textarea class="input" id="fichePlan" placeholder="Ex : lvl 1 safe, lvl 2 trade court, push lvl 3 pour la ward, recall à 4:30 avec 900 g.">${esc(f.plan)}</textarea>
+    <label class="field" style="margin-top:10px">Matchups durs (3 max, avec le plan)</label>
+    <div id="ficheMatchups" class="grid" style="gap:8px">${f.matchups.map((m, i) => `<div class="insight" style="align-items:center"><div>${champIcon(m.champ)}</div><div style="flex:1;min-width:0"><b>${esc(champName(m.champ))}</b><textarea class="input mu-plan" data-i="${i}" placeholder="Le plan : qui gagne lvl 1/2/6, comment trade, quand recall…" style="margin-top:4px;min-height:48px">${esc(m.plan||'')}</textarea></div><button class="btn xs ghost mu-rm" data-i="${i}">✕</button></div>`).join('')}</div>
+    ${f.matchups.length < 3 ? `<div class="champ-pick" style="margin-top:8px"><input class="input" id="muAdd" placeholder="+ ajouter un matchup" autocomplete="off"><div class="champ-list hidden" id="muAddList"></div></div>` : ''}
+    <p class="tiny muted" style="margin-top:8px">Tout est sauvegardé automatiquement. La fiche s'affiche en rappel quand tu sélectionnes ce champion dans une session.</p>`;
+  $$('#ficheSpikes .chip').forEach(c => c.onclick = () => { const v = c.dataset.v; f.spikes = f.spikes.includes(v) ? f.spikes.filter(x => x !== v) : [...f.spikes, v]; save(); c.classList.toggle('on', f.spikes.includes(v)); });
+  $('#ficheCombos').onchange = () => { f.combos = $('#ficheCombos').value.trim(); save(); };
+  $('#ficheBuild').onchange = () => { f.build = $('#ficheBuild').value.trim(); save(); };
+  $('#fichePlan').onchange = () => { f.plan = $('#fichePlan').value.trim(); save(); };
+  $$('.mu-plan').forEach(t => t.onchange = () => { f.matchups[+t.dataset.i].plan = t.value.trim(); save(); });
+  $$('.mu-rm').forEach(b => b.onclick = () => { f.matchups.splice(+b.dataset.i, 1); save(); renderFiches(); });
+  attachPicker($('#muAdd'), $('#muAddList'), id => { if (!f.matchups.find(m => m.champ === id)) f.matchups.push({ champ:id, plan:'' }); save(); renderFiches(); });
+}
+
+/* draft */
+let draft = { banRole: null, team: new Set(), enemy: new Set(), mine: null, enemyChamp: null };
+function renderDraft(){
+  draft.banRole = draft.banRole || S.profile.mainRole || 'MID';
+  S.bans = S.bans || {}; S.bans[draft.banRole] = S.bans[draft.banRole] || [];
+  $('#banRoleChips').innerHTML = ROLES.map(r => `<span class="chip ${draft.banRole === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#banRoleChips .chip').forEach(c => c.onclick = () => { draft.banRole = c.dataset.v; renderDraft(); });
+  const bans = S.bans[draft.banRole];
+  $('#banList').innerHTML = bans.length ? bans.map(id => `<span class="chip on" data-id="${id}">${champIcon(id, 'sm')} ${esc(champName(id))} ✕</span>`).join('') : '<span class="tiny muted">Aucun ban noté pour ce rôle.</span>';
+  $$('#banList .chip').forEach(c => c.onclick = () => { S.bans[draft.banRole] = bans.filter(x => x !== c.dataset.id); save(); renderDraft(); });
+  attachPicker($('#banInput'), $('#banPick'), id => { if (!bans.includes(id)) bans.push(id); save(); renderDraft(); });
+  // matchup du jour
+  const mine = ficheChamps();
+  const sel = $('#muMine'); const cur = draft.mine && mine.includes(draft.mine) ? draft.mine : mine[0] || '';
+  sel.innerHTML = mine.length ? mine.map(id => `<option value="${id}" ${id === cur ? 'selected' : ''}>${esc(champName(id))}</option>`).join('') : '<option value="">Ajoute des champions à ton pool</option>';
+  draft.mine = cur || null;
+  sel.onchange = () => { draft.mine = sel.value; renderMatchupResult(); };
+  attachPicker($('#muEnemy'), $('#muPick'), id => { draft.enemyChamp = id; renderMatchupResult(); });
+  renderMatchupResult();
+  // compo
+  const chips = (el, set) => { el.innerHTML = COMP_TAGS.map(t => `<span class="chip ${set.has(t.id) ? 'on' : ''}" data-v="${t.id}">${t.fr}</span>`).join(''); $$('.chip', el).forEach(c => c.onclick = () => { if (set.has(c.dataset.v)) set.delete(c.dataset.v); else set.add(c.dataset.v); c.classList.toggle('on', set.has(c.dataset.v)); renderCompResult(); }); };
+  chips($('#compTeam'), draft.team); chips($('#compEnemy'), draft.enemy);
+  renderCompResult();
+}
+function renderMatchupResult(){
+  const el = $('#muResult'); if (!draft.mine || !draft.enemyChamp){ el.innerHTML = '<p class="tiny muted">Choisis ton champion et celui d\'en face : le plan noté dans ta fiche apparaît ici.</p>'; return; }
+  const f = (S.fiches || {})[draft.mine]; const m = f && f.matchups.find(x => x.champ === draft.enemyChamp); const L = champLinks(draft.mine);
+  el.innerHTML = `<div class="insight ${m ? 'good' : 'warn'}"><div class="ico">${svgUse(m ? 'i-check' : 'i-warn')}</div><div><b>${esc(champName(draft.mine))} vs ${esc(champName(draft.enemyChamp))}</b><p>${m ? (esc(m.plan) || 'Matchup noté, mais sans plan : ajoute-le dans la fiche.') : 'Pas de note dans ta fiche. Regarde les chiffres, puis note un plan en 2 lignes.'}</p>
+    <div class="btn-row" style="margin-top:6px"><a class="btn xs" target="_blank" rel="noopener" href="${L.lolaVs(draft.enemyChamp)}">Lolalytics vs</a><a class="btn xs" target="_blank" rel="noopener" href="${L.uggMu}">Matchups u.gg</a>${!m ? `<button class="btn xs teal" id="muAddFromDraft">Noter ce matchup</button>` : ''}</div></div></div>`;
+  const b = $('#muAddFromDraft'); if (b) b.onclick = () => { const ff = fiche(draft.mine); if (ff.matchups.length >= 3){ toast('3 matchups max par fiche'); return; } ff.matchups.push({ champ:draft.enemyChamp, plan:'' }); save(); ficheSel = draft.mine; renderFiches(); $('#ficheBody').scrollIntoView({behavior:'smooth'}); toast('Matchup ajouté à la fiche : écris le plan.'); };
+}
+function renderCompResult(){
+  const el = $('#compResult'); const t = draft.team, e = draft.enemy;
+  if (!t.size && !e.size){ el.innerHTML = '<p class="tiny muted">Coche les forces de chaque compo pendant la draft : le coach te dit ce qui manque et comment jouer contre.</p>'; return; }
+  const core = [['engage','un engage'],['front','une frontline'],['ad','des dégâts AD'],['ap','des dégâts AP'],['peel','du peel pour le carry']];
+  const missing = core.filter(([id]) => !t.has(id)).map(([, fr]) => fr);
+  const adv = COMP_TAGS.filter(x => e.has(x.id) && DRAFT_ADVICE[x.id]).map(x => `<li>${DRAFT_ADVICE[x.id]}</li>`);
+  el.innerHTML = `${t.size ? `<div class="insight ${missing.length > 2 ? 'bad' : missing.length ? 'warn' : 'good'}"><div class="ico">${svgUse(missing.length ? 'i-warn' : 'i-check')}</div><div><b>Ma compo</b><p>${missing.length ? 'Il manque ' + missing.join(', ') + '. Si tu es dernier pick, comble le trou le plus grave (frontline &gt; engage &gt; type de dégâts).' : 'Compo complète : engage, frontline, dégâts mixtes, peel. Joue-la proprement.'}</p></div></div>` : ''}
+    ${adv.length ? `<div class="insight" style="margin-top:8px"><div class="ico">${svgUse('i-bolt')}</div><div><b>Contre leur compo</b><ul class="clean small">${adv.join('')}</ul></div></div>` : ''}`;
+}
+
+/* review : sélection de game + méthode */
+function renderReviewTools(){
+  const games = gamesSorted().reverse().slice(0, 20);
+  const sel = $('#rvGame');
+  sel.innerHTML = '<option value="">— Sans game précise —</option>' + games.map(g => `<option value="${g.id}">${esc(fmtDateTime(g.ts))} · ${esc(champName(g.champ))} · ${g.result === 'W' ? 'V' : g.result === 'L' ? 'D' : 'R'}${g.lp != null ? ` (${g.lp > 0 ? '+' : ''}${g.lp})` : ''}</option>`).join('');
+  const info = () => { const g = S.games.find(x => x.id === sel.value); const el = $('#rvGameInfo'); if (!g){ el.innerHTML = 'Conseil : reviewe une <b>défaite serrée</b> plutôt qu\'un stomp — c\'est là que tes décisions ont pesé.'; return; }
+    const tag = ERR_TAGS.find(e => e.id === g.err);
+    el.innerHTML = `${g.k != null ? `KDA ${g.k}/${g.d ?? 0}/${g.a ?? 0} · ` : ''}${csmin(g) != null ? `${csmin(g).toFixed(1)} CS/min · ` : ''}${g.fd != null ? `1re mort ${g.fd} min · ` : ''}${tag ? `erreur : ${esc(tag.fr)} · ` : ''}${g.lesson ? `leçon : « ${esc(g.lesson)} »` : ''}
+      ${(g.deaths||[]).length ? `<div style="margin-top:6px"><b>Journal des morts :</b><ul class="clean tiny">${g.deaths.map(d => `<li>${d.m} min — ${esc((ERR_TAGS.find(e => e.id === d.tag)||{}).fr || d.tag)}${d.note ? ` — ${esc(d.note)}` : ''}</li>`).join('')}</ul><span class="tiny">Va directement à ces minutes dans le replay.</span></div>` : ''}`; };
+  sel.onchange = info; info();
+  $('#reviewSteps').innerHTML = REVIEW_STEPS.map((st, i) => `<details${i === 0 ? ' open' : ''}><summary><span>${i+1}. ${esc(st.t)}</span></summary><div class="body">${esc(st.d)}</div></details>`).join('');
+}
 function renderMental(){
   $('#mentalRules').innerHTML = MENTAL_RULES.map(r => `<li>${r}</li>`).join('');
   $('#tiltTriggers').innerHTML = TILT_TRIGGERS.map(t => `<span class="chip" data-v="${esc(t)}">${esc(t)}${S.tilt[t] ? ` <b>${S.tilt[t]}</b>` : ''}</span>`).join('');
@@ -2104,16 +2548,16 @@ function renderMental(){
 }
 function renderReviews(){
   const list = S.reviews.slice().reverse().slice(0, 5);
-  $('#reviewList').innerHTML = list.length ? list.map(r => `<details><summary><span>Review du ${esc(fmtDateTime(r.ts))}</span></summary><div class="body"><p><b>Pire mort :</b> ${esc(r.q1)}</p><p><b>Décision macro :</b> ${esc(r.q2)}</p><p><b>À répéter :</b> ${esc(r.q3)}</p><p><b>Focus suivant :</b> ${esc(r.q4)}</p><button class="btn xs ghost rv-del" data-id="${r.id}">supprimer</button></div></details>`).join('') : '';
+  $('#reviewList').innerHTML = list.length ? list.map(r => { const g = r.gameId && S.games.find(x => x.id === r.gameId); return `<details><summary><span>Review du ${esc(fmtDateTime(r.ts))}${g ? ` — ${esc(champName(g.champ))} (${g.result === 'W' ? 'V' : 'D'})` : ''}</span></summary><div class="body"><p><b>Pire mort :</b> ${esc(r.q1)}</p><p><b>Décision macro :</b> ${esc(r.q2)}</p><p><b>À répéter :</b> ${esc(r.q3)}</p><p><b>Focus suivant :</b> ${esc(r.q4)}</p><button class="btn xs ghost rv-del" data-id="${r.id}">supprimer</button></div></details>`; }).join('') : '';
   $$('.rv-del').forEach(b => b.onclick = () => { S.reviews = S.reviews.filter(r => r.id !== b.dataset.id); save(); renderReviews(); });
 }
 function saveReview(){
   const q = ['#rv1','#rv2','#rv3','#rv4'].map(id => $(id).value.trim());
   if (!q.some(Boolean)){ toast('Écris au moins une réponse'); return; }
-  S.reviews.push({ id:uid(), ts:Date.now(), q1:q[0], q2:q[1], q3:q[2], q4:q[3] }); save();
+  S.reviews.push({ id:uid(), ts:Date.now(), gameId: $('#rvGame').value || null, q1:q[0], q2:q[1], q3:q[2], q4:q[3] }); save();
   ['#rv1','#rv2','#rv3','#rv4'].forEach(id => $(id).value = ''); renderReviews(); toast('Review sauvegardée');
 }
-function renderCoach(){ renderWeek(); renderCoachContent(); renderPool(); renderMental(); renderReviews(); }
+function renderCoach(){ renderWeek(); renderWeekReport(); renderCoachContent(); renderFiches(); renderDraft(); renderPool(); renderMental(); renderReviewTools(); renderReviews(); }
 
 /* ---------- MUSIQUE ---------- */
 const q = s => encodeURIComponent(s);
@@ -2157,9 +2601,29 @@ function renderSettings(){
   $('#setName').value = S.profile.name || ''; $('#setRole').value = S.profile.mainRole || 'MID';
   $('#setTheme').value = S.settings.theme || 'dark'; $('#setSound').value = S.settings.sound ? '1' : '0';
   $('#ddVer').textContent = DD_VER;
+  renderPatchForm();
   const syncDiv = (tierSel, divSel) => { const t = TIERS.find(x => x.id === tierSel.value); divSel.disabled = !t || !t.divs; };
   syncDiv($('#setTier'), $('#setDiv')); syncDiv($('#goalTier'), $('#goalDiv'));
   $('#setTier').onchange = () => syncDiv($('#setTier'), $('#setDiv')); $('#goalTier').onchange = () => syncDiv($('#goalTier'), $('#goalDiv'));
+}
+function renderPatchForm(){
+  const o = S.settings.overrides || {};
+  let grp = '';
+  $('#patchForm').innerHTML = PATCH_DEFAULTS.map(d => { const head = d.grp !== grp ? (grp = d.grp, `<div style="grid-column:1 / -1;margin-top:4px"><span class="badge gold">${d.grp}</span></div>`) : '';
+    const v = o[d.k] != null && o[d.k] !== '' ? o[d.k] : d.v;
+    return head + `<div><label class="field">${esc(d.fr)} <span class="muted" style="text-transform:none;letter-spacing:0">(${mmss(d.v)} par défaut)</span></label><input class="input patch-in" type="number" min="0" data-k="${d.k}" value="${v}" ${+v !== d.v ? 'style="border-color:var(--gold)"' : ''}></div>`; }).join('');
+  $('#patchVerified').textContent = PATCH_VERIFIED;
+  renderPatchBadge();
+}
+function renderPatchBadge(){
+  const cur = DD_VER ? '26.' + (DD_VER.split('.')[1] || '?') : null;
+  const el = $('#patchBadge'); if (!el) return;
+  el.innerHTML = cur && cur !== '26.' + PATCH_VERIFIED.split('.')[1] ? `<span class="badge warn">${svgUse('i-warn', 12)} Patch ${esc(cur)} détecté : vérifie les valeurs</span>` : `<span class="badge win">${svgUse('i-check', 12)} À jour (patch ${esc(cur || PATCH_VERIFIED)})</span>`;
+}
+function savePatch(){
+  const o = {};
+  $$('.patch-in').forEach(i => { const d = PATCH_DEFAULTS.find(x => x.k === i.dataset.k); const v = i.value.trim() === '' ? null : +i.value; if (v != null && !isNaN(v) && v !== d.v) o[d.k] = v; });
+  S.settings.overrides = o; save(); buildObjDefs(); renderCheatsheets(); renderPatchForm(); toast(Object.keys(o).length ? `${Object.keys(o).length} valeur(s) personnalisée(s)` : 'Valeurs par défaut');
 }
 function saveRank(){
   const tier = $('#setTier').value; const t = TIERS.find(x => x.id === tier);
@@ -2201,6 +2665,11 @@ function render(view){
 function init(){
   applyTheme(); fillTierSelects(); renderRankChip(); renderCheatsheets(); setupChampPicker();
   $('#startSession').addEventListener('click', startSession);
+  $('#startExpress').addEventListener('click', startExpress);
+  $('#addDeath').addEventListener('click', () => { form.deaths.push({ m:null, tag:'position', note:'' }); renderDeathRows(); const last = $$('#deathRows input[data-f=m]').pop(); if (last) last.focus(); });
+  $('#patchSave').addEventListener('click', savePatch);
+  $('#patchReset').addEventListener('click', () => { S.settings.overrides = {}; save(); buildObjDefs(); renderCheatsheets(); renderPatchForm(); toast('Valeurs du patch ' + PATCH_VERIFIED + ' rétablies'); });
+  $('#compReset').addEventListener('click', () => { draft.team.clear(); draft.enemy.clear(); renderDraft(); });
   $('#endSession').addEventListener('click', endSession);
   $('#saveGame').addEventListener('click', saveGame);
   $('#warmupStart').addEventListener('click', warmupStart);
