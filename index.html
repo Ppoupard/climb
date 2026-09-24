@@ -818,6 +818,8 @@ details + details{margin-top:8px}
       <div><label class="field">Champion</label><div class="champ-pick"><input class="input" id="ficheInput" placeholder="Choisis un champion…" autocomplete="off"><div class="champ-list hidden" id="ficheList"></div></div></div>
       <div class="recent-champs" id="ficheQuick" style="margin-top:0"></div>
     </div>
+    <div class="chips" id="ficheRoleChips" style="margin-top:10px"></div>
+    <div id="ficheRoleGrid" class="recent-champs"></div>
     <div id="ficheBody" style="margin-top:12px"></div>
   </div>
 
@@ -1446,6 +1448,1405 @@ const DRAFT_ADVICE = {
 };
 
 /* ============================================================
+   CLIMB — fiches champion rédigées par le coach (A → G)
+   r = rôles, t = type, s = spikes, c = combos, b = build, p = plan, m = matchups [id, plan], k = tips, v = bon / difficile contre
+   ============================================================ */
+const FICHES_DEFAULT = {
+Aatrox:{r:['TOP'],t:'Bruiser drain-tank',s:['Niveau 6','2 objets'],
+c:'Q1 → Q2 → Q3 en reculant l\'ennemi vers toi avec W : chaque Q touche sur le bord (« sweet spot ») pour l\'airborne. E se lance pendant un Q pour repositionner le coup. R avant un fight long (soins + AD) ; ne pas R pour fuir. Trade court : Q1 sweet spot + AA (passif) puis recule.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak ou Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 1–3 : farm et cherche uniquement les Q sweet spot quand l\'ennemi last-hit. Lvl 6 : all-in avec W posé derrière l\'ennemi. Recall sur composant d\'épée. Mid game : side lane + TP sur dragon, tu gagnes les 1v1 avec R.',
+m:[['Fiora','Elle pare ton Q3 ou ton W : lance Q3 seulement après sa parade. Ne trade pas lvl 1, tu perds une fois qu\'elle a 2 objets.'],['Vayne','Kite infini : joue derrière tes sbires, Q vers l\'avant pour zoner, attends le gank. Bottes plaquées early.'],['Kled','Il gagne les trades courts avec Skaarl : recule quand il a sa monture, all-in quand il l\'a perdue.']],
+k:['Le sweet spot du Q, c\'est la moitié externe : place-toi pour que l\'ennemi soit au bord.','W posé derrière l\'ennemi = il revient vers ton Q3.'],
+v:'Bon contre les mêlées sans mobilité (Garen, Mordekaiser, Sett) · Difficile contre le kite et l\'anti-soin (Vayne, Kennen, Ignite + Executioner)'},
+
+Ahri:{r:['MID'],t:'Mage assassin mobile',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Charme E → Q (aller-retour) → W. Avec R : R vers l\'ennemi → E → Q → W → R pour ressortir. Pour poke : Q sur la wave quand l\'ennemi est derrière (dégâts bruts au retour).',
+b:'Luden\'s Echo → Shadowflame → Rabadon (Zhonya si assassins) · Bottes du sorcier · Électrocution (kill) ou Aery / Comète (poke)',
+p:'Push avec Q pour avoir prio, roam bot ou rivière à 6 avec R up. Charme = le sort qui décide : garde-le pour le trade, pas pour poke. Recall quand la wave crash et que R est up pour revenir vite.',
+m:[['Yasuo','Son mur bloque Q et E : lance E quand son W est en CD (24 s lvl 1). Charme dès qu\'il dash sur toi.'],['Zed','Zhonya 2e objet. Charme quand il sort de son R (il apparaît derrière toi). Ne push pas sans vision après 6.'],['Fizz','E de Fizz esquive tout : attends qu\'il ait utilisé E, puis charme + full combo. Reste à distance max.']],
+k:['R = 3 dashes en 10 s : le premier pour entrer, le dernier pour sortir, toujours.','Le charme interrompt les dashes (Lee Sin Q2, Zac E).'],
+v:'Bonne contre les mages immobiles (Syndra, Lux) · Difficile contre les assassins qui la burst avant son R (Zed, Fizz, Talon)'},
+
+Akali:{r:['MID','TOP'],t:'Assassine sans ressource',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Q (à portée max pour le slow) → AA (passif) → W pour reset l\'agro et Q depuis le voile → E1 → E2 (dash sur le shuriken) → R1 → Q → R2 pour finir. Trade lvl 2 : Q + AA passif, recule dans le voile.',
+b:'Hextech Gunblade ou Lich Bane → Shadowflame → Zhonya / Rabadon · Bottes du sorcier · Conquérant (top) ou Électrocution (mid)',
+p:'Pré-6 : farm avec Q, trade uniquement avec passif chargé. Le voile W te sort des trades perdus. Post-6 : all-in sur l\'ennemi qui a utilisé son escape, roam avec R up. Objectif : 2 objets à 15 min, tu deviens injouable.',
+m:[['Galio','Il te taunt dans le voile : ne W pas au contact, trade à portée de Q et recule. Anti-tank utile.'],['Kassadin','Tu dois le tuer avant 16. Push et roam, ne le laisse pas farmer libre.'],['Malzahar','Bouclier passif : casse-le avec un shuriken avant tout combo. R de Malz = ta mort sans QSS.']],
+k:['Dans le voile, les tours te voient : ne dive pas sans le compter.','R1 traverse les murs ; R2 exécute selon les PV manquants.'],
+v:'Bonne contre les mages sans CC instantané · Difficile contre les tanks CC (Galio, Malphite) et les compo à révélation (Lee Sin R, wards de contrôle)'},
+
+Akshan:{r:['MID','TOP'],t:'Marksman assassin',s:['Niveau 3','1er objet','2 objets'],
+c:'Q → AA (le Q revient et touche 2 fois) → AA (passif 3 coups) → E pour la mobilité. Trade : Q + 2 AA puis recule. E balance autour d\'un mur pour tirer en tournant. R canalisé sur une cible isolée, cancel dès que pas sûr.',
+b:'Kraken Slayer / Yun Tal → Collector → Infinity Edge · Berserker · Précision (PTA)',
+p:'Lvl 1–5 : poke Q + AA, tu gagnes les trades courts. W (invisible) pour reset les trades et roam. Après un allié tué, deviens Scoundrel-hunter : un kill = tu ressuscites ton allié. Mid game : side lane, E pour traverser.',
+m:[['Yasuo','Son mur bloque Q et R. Trade quand W est down, ne le laisse pas coller.'],['Galio','Anti-AD tanky : poke uniquement, ne combat pas au corps à corps, roam.'],['Fizz','Tu meurs post-6 sans flash : joue derrière ta wave, pink, et recale.']],
+k:['E accroché sur un terrain = tu peux tourner autour pour tirer 5 coups.','Le camouflage W se coupe près des ennemis : approche par les bushes.'],
+v:'Bon contre les mages immobiles · Difficile contre les assassins à dash et les anti-projectiles'},
+
+Alistar:{r:['SUPPORT'],t:'Tank engage',s:['Niveau 2','Niveau 6','Niveau 11'],
+c:'W (headbutt) → Q (pulverize) en instant : W puis Q avant d\'arriver = combo « WQ » pour envoyer l\'ennemi en l\'air et le garder. Flash + Q sur 2 cibles. E (trample) chargé en marchant dans les ennemis → stun via AA.',
+b:'Objet support (Solstice Sleigh ou Celestial Opposition) → Locket → Knight\'s Vow / Zeke\'s · Bottes plaquées ou Mercury · Aftershock',
+p:'Lvl 2 rapide (au 7e sbire) : WQ dès que tu as les 2 sorts. Engage quand ton ADC est à portée. Vision à 2:40, pink tri-bush. En mid game, engage sur le carry le plus proche, R pour survivre le focus.',
+m:[['Morgana','Son bouclier noir annule ton Q : engage après qu\'elle l\'a mis sur l\'ADC, ou sur elle-même.'],['Janna','Elle te repousse en pleine charge : attends que Q de Janna soit en CD.'],['Lulu','Polymorph pendant W : dépasse-la et engage après sa W.']],
+k:['W → Q pendant le dash = combo obligatoire, entraîne-le en outil d\'entraînement.','R réduit les dégâts et retire les CC : à lancer avant de rentrer, pas après.'],
+v:'Bon contre les lanes passives et les ADC sans escape · Difficile contre les enchanteurs disengage (Janna, Morgana)'},
+
+Ambessa:{r:['TOP','JUNGLE'],t:'Bruiser duelist',s:['Niveau 3','1er objet','2 objets'],
+c:'Chaque sort déclenche un dash court + AA renforcée (passif) : Q1 → passif AA → E → AA → Q2 → AA. W pour absorber un trade (bloque les dégâts) puis frappe au sol. R sur la cible prioritaire : suppression + dash à travers les murs.',
+b:'Eclipse → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Trades courts à répétition lvl 1–3 : un sort, un AA renforcée, recule. W en réponse au sort clé adverse. Post-6, all-in R sur le carry en teamfight, ou 1v1 le top adverse avec W en réponse à son burst.',
+m:[['Fiora','Elle pare ton W : lance W tard. Trade court et sors avant sa riposte. Ne fight pas sur ses vitals.'],['Jax','Il contre-frappe tes AA renforcées : trade sur son E en CD (10 s).'],['Malphite','Il tank tout et te ralentit : farm, side push, tu gagnes les fights à 5.']],
+k:['Chaque dash de passif peut traverser un petit obstacle : sers-t\'en pour finir un ennemi sous tour.','W bloque tout un coup : anticipe (Darius R, Garen R).'],
+v:'Bonne contre les bruisers lents · Difficile contre les tanks CC et les champions à parade'},
+
+Amumu:{r:['JUNGLE','SUPPORT'],t:'Tank engage AoE',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (bandage) → R → W + E. Q a 2 charges : une pour engager, une pour poursuivre. Flash R sur 3+ ennemis en teamfight. En gank : Q sur l\'ennemi, E, et ton laner fait le reste.',
+b:'Sunfire (ou Liandry si AP) → Jak\'Sho / Thornmail · Mercury ou plaquées · Aftershock',
+p:'Full clear (W permanent, E sur les camps) puis gank la lane avec le plus de CC. Objectifs : tu tank le dragon avec E. Post-6, chaque gank avec R = kill quasi garanti. Dans les teamfights, R au centre, pas sur le tank.',
+m:[['Nunu','Il t\'invade et te vole les camps : commence côté opposé, ward ton 2e buff.'],['Kindred','Elle kite ton Q : gank plutôt que de duel, prends ses camps quand elle est loin.'],['Lillia','Elle est plus rapide et plus douloureuse en clear : joue les objectifs, pas le 1v1.']],
+k:['Q a 2 charges depuis la mise à jour : n\'en garde pas une inutile.','Ton R traverse le brouillard : caché dans un bush, Q + R sur 3 ennemis.'],
+v:'Bon contre les compos groupées sans Cleanse · Difficile contre les compos à disengage (Janna, Gragas) et les mages à portée'},
+
+Anivia:{r:['MID'],t:'Mage contrôle',s:['Niveau 6','1er objet','Niveau 11'],
+c:'Q (recast pour exploser au contact) → E (dégâts doublés sur cible gelée) → R pour le ralentissement. Combo full : W derrière l\'ennemi → Q → R → E. Mur W pour bloquer un gank ou séparer une équipe.',
+b:'Rod of Ages → Archangel/Seraph → Liandry / Rabadon · Bottes du sorcier · Aery ou Comète (Phase Rush possible)',
+p:'Lvl 1–5 : farm safe (Q pour last-hit à distance), tu es faible. Passif (œuf) permet de trader agressivement quand le jungler adverse est loin. Post-6 : R sur la wave = push instantané, roam. Tempo de mana : recall avec Tear.',
+m:[['Yasuo','Il bloque Q et E avec W : attends que le mur soit posé, puis Q. Utilise W pour bloquer son dash.'],['Zed','Zhonya 2e objet, mur W pour bloquer ses ombres. Passif = tu survis mais reste sous tour.'],['Talon','Il saute les murs : W pour bloquer son chemin de roam. Pink rivière, joue loin des murs.']],
+k:['Q stun 1,1 s : lance-le en marchant, recast au contact.','Ton mur peut aussi bloquer un allié : place-le en biais.'],
+v:'Bonne contre les mêlées sans gap-close · Difficile contre les assassins mobiles et le poke longue portée'},
+
+Annie:{r:['MID','SUPPORT'],t:'Mage burst',s:['Niveau 6','1er objet','2 objets'],
+c:'Charge 4 stacks du passif sur les sbires (E ne coûte rien de risqué) → à 4 stacks : R (Tibbers, stun) → Q → W → E → AA. Flash + R pour l\'engage surprise. Trade court : Q stun (si stacks) + AA.',
+b:'Luden\'s Echo → Shadowflame → Rabadon ou Zhonya · Bottes du sorcier · Électrocution',
+p:'Farm au Q (retour de mana sur last-hit). Garde 4 stacks quand tu marches vers l\'ennemi = menace. Post-6 avec stacks et R : all-in sans réponse possible. Roam bot avec le stun en poche.',
+m:[['Galio','Il annule ton burst avec W : Q d\'abord pour casser son bouclier, R quand il a utilisé W.'],['Kassadin','Tu domines avant 6, puis il scale : tue-le pré-11, push et roam.'],['Fizz','E de Fizz esquive Tibbers : lance R quand son E est en CD ou après son saut.']],
+k:['Tibbers peut bloquer le dash de certains champions et tanker les tours.','Stun garanti = 4 stacks affichés : ne gaspille jamais un E.'],
+v:'Bonne contre les mages sans mobilité · Difficile contre les tanks CC et les assassins qui l\'engagent sans stacks'},
+
+Aphelios:{r:['ADC'],t:'ADC scaling, 5 armes',s:['2 objets','3 objets','Late game'],
+c:'Ordre d\'armes : Calibrum (poke) → Severum (soin) → Gravitum (root) → Infernum (AoE) → Crescendum (DPS). Combos clés : Infernum Q + Crescendum off-hand = burst AoE ; Calibrum Q → marque → AA longue portée ; Gravitum Q root sur cibles marquées. R avec Infernum = teamfight.',
+b:'Collector / Kraken → Infinity Edge → Lord Dominik / Bloodthirster · Berserker · Précision (PTA) ou Fleet',
+p:'Lane faible : farm, laisse le support gérer. Priorise les trades quand tu as Calibrum + Severum. Mid game : ton pic commence à 2 objets ; en teamfight, garde Gravitum pour un root avant de choisir Infernum.',
+m:[['Draven','Il te tue en 3 AA lvl 1 : farm à portée max, jamais de trade avant Severum. Attends ton jungler.'],['Caitlyn','Portée plus longue : ne te fais pas piéger, farm avec Calibrum et attends 2 objets.'],['Lucian','Il all-in au lvl 2 : garde le support proche, échange uniquement quand il a utilisé E.']],
+k:['Le compteur de munitions (50) décide de tes armes 2 armes plus loin : planifie.','Crescendum tourelle sur toi = DPS max en teamfight autour de ton frontline.'],
+v:'Bon contre les compos qui laissent scale · Difficile contre les lanes aggressives lvl 2 et les assassins'},
+
+Ashe:{r:['ADC','SUPPORT'],t:'ADC utilitaire, kite',s:['Niveau 6','2 objets','Niveau 11'],
+c:'W (volée) → AA (crit passif ralentit) → kite Q activé. Engage : R sur cible → AA + W. Poke lane : W dès que l\'ennemi approche pour farmer. Focus permanent : le ralentissement passif = ton AD gagne les trades longs.',
+b:'Kraken / Yun Tal → Infinity Edge → Lord Dominik · Berserker · Tempo Létal (DPS) ou Fleet (safe)',
+p:'Lvl 1 : W sur les sbires et l\'ennemi = ils reculent. Prends la prio et push, R pour les ganks du jungler dès 6 (global). E (faucon) pour la vision du dragon avant 5:00. Mid game : ton R lance les fights ; joue à portée max.',
+m:[['Draven','Il gagne le duel : W pour le tenir loin, ne trade pas en AA. R pour le ganker à 6.'],['Caitlyn','Portée plus longue : poke W, évite les pièges, cherche le lvl 6 pour un pick.'],['Samira','All-in et blocs de projectiles : W en avant, recule quand son W est up, R quand elle dash sur toi.']],
+k:['E (faucon) avant 5:00 sur dragon et à 8:00 sur les grubs, gratuit.','R longue distance = l\'engage du jungler : ping avant de tirer.'],
+v:'Bonne contre les mêlées sans dash · Difficile contre les assassins (aucun escape)'},
+
+AurelionSol:{r:['MID'],t:'Mage scaling contrôle',s:['Niveau 6','2 objets','Late game'],
+c:'Q canalisé (accumule des stacks) → W pour voler et repositionner pendant Q → E (trou noir) pour grouper → R (étoile) sur le E = stun (après Niveau 11 / stacks). Farm : E sur la wave + Q.',
+b:'Rod of Ages → Liandry → Rylai / Rabadon · Bottes du sorcier · Phase Rush (survie) ou Aery',
+p:'Lane : farm, stacks, ne meurs pas. Chaque stack = plus fort en late. Recall sur RoA. Post-6 : W pour rejoindre les fights côté, E + R pour zoner les objectifs. Tu scales : ne prends pas de risques avant 2 objets.',
+m:[['Zed','Zhonya rush, joue loin des sbires, W de fuite quand il R (tu voles hors de sa portée).'],['Yasuo','Il bloque Q et R avec W, et te colle : E pour le tenir loin, ne push pas sans jungler.'],['Talon','Roam hyper rapide : ping ses absences, ward, farm safe.']],
+k:['W permet de traverser les murs : escape et roam.','R après stack suffisant = knock-up + stun : le sort qui gagne les fights à 5.'],
+v:'Bon contre les mages immobiles en late · Difficile contre les assassins en early'},
+
+Aurora:{r:['MID','TOP'],t:'Mage assassine mobile',s:['Niveau 3','1er objet','Niveau 6'],
+c:'Q (lance) → AA → recast Q (retour) → W (saut invisible) → E (recul + slow). Passif : 3 coups = soins + dégâts bonus. R : zone qui piège les ennemis, ne pas R sur le tank mais sur le carry isolé.',
+b:'Luden\'s Echo / Stormsurge → Shadowflame → Rabadon (Zhonya vs assassins) · Bottes du sorcier · Électrocution (mid) ou Comète',
+p:'Trades courts : Q + AA + Q recast puis W pour reset. Tu gagnes les trades lvl 1–3 contre la majorité. Post-6, R pour piéger dans un 1v1 ou en gank. Roam avec W (vitesse en invisible).',
+m:[['Galio','Sa W annule ton burst et te taunt : trade uniquement quand son W est en CD (18 s).'],['Kassadin','Tue-le pré-11 : trades courts constants, push, roam.'],['Ahri','Charme pendant ton W : saute après son E. Duel équilibré, joue le CD.']],
+k:['W te rend invisible : les pinks te révèlent, pas les wards vertes.','Ton R déplace aussi les alliés au bord : ne l\'utilise pas pour fuir avec l\'équipe.'],
+v:'Bonne contre les mêlées et les mages immobiles · Difficile contre les tanks CC et les anti-soin'},
+
+Azir:{r:['MID'],t:'Mage DPS scaling',s:['2 objets','Niveau 11','Late game'],
+c:'W (soldat) → Q (déplace les soldats) → AA via soldats. Shuffle : W derrière l\'ennemi → E (dash vers le soldat) → R pour projeter l\'ennemi vers ton équipe. Farm : 2 soldats sur la wave.',
+b:'Nashor\'s Tooth → Liandry / Blackfire Torch → Rabadon · Bottes du sorcier · Conquérant ou Tempo Létal',
+p:'Lane : farm avec les soldats à distance, poke Q + soldats quand l\'ennemi last-hit. Ne fais pas d\'all-in sans jungler avant 2 objets. Mid game : side lane avec soldats sur la tour, R pour disengage ou shuffle en fight.',
+m:[['Zed','Zhonya 2e objet. Soldats entre lui et toi. Quand il R : Zhonya puis E de fuite.'],['Ahri','Charme pendant ton E : lance E tard. Trade uniquement à 3 soldats.'],['Yasuo','Le mur ne bloque pas tes soldats : abuse. Mais ne dash jamais sur lui sans R up.']],
+k:['E vers un soldat = dash gratuit qui traverse les murs (escape).','R en défense : projette 2 ennemis loin de ton carry.'],
+v:'Bon contre les mages sans dash en late · Difficile contre les assassins qui le collent (Zed, Fizz)'},
+
+Bard:{r:['SUPPORT'],t:'Support roam utilitaire',s:['Niveau 3','Niveau 6','Niveau 11'],
+c:'Q double stun : Q en visant 2 cibles alignées (ennemi + sbire / mur). Ramasse les carillons entre les waves. E (portail) pour un gank ou une fuite. R : stase 2,5 s sur zone — sur ton équipe pour esquiver un R ennemi, sur la tour pour un dive.',
+b:'Objet support (Bloodsong / Celestial) → Locket ou Redemption → Zeke\'s / Knight\'s Vow · Mobility / Mercury · Guardian ou Glacial',
+p:'Lane : pose 2 sanctuaires (W) pour l\'ADC puis roam mid via les carillons. Reviens quand la wave push vers l\'ennemi. Objectifs : ton E traverse les murs pour contester. R pour bloquer un Baron ennemi, un dive, ou geler un carry.',
+m:[['Leona','Elle engage quand tu roams : préviens l\'ADC, reviens sur ton E. Q dès qu\'elle utilise E.'],['Blitzcrank','Reste derrière les sbires, Q le grab CD (20 s).'],['Pyke','Il te suit en roam : ward, pink, joue en duo mid quand tu roams.']],
+k:['R sur un allié = il ne peut plus rien faire pendant 2,5 s : ne stase pas ton carry en plein DPS.','Q contre un mur = stun facile pour ton jungler.'],
+v:'Bon contre les lanes lentes et les compos sans engage · Difficile contre les engages sur l\'ADC pendant tes roams'},
+
+Belveth:{r:['JUNGLE'],t:'Duelist AS scaling',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (dash 4 directions, une par côté) → AA → E (canalisé, dégâts basés sur PV manquants) → W (knock-up). Combo gank : W → Q → AA → E. Après un kill / monstre épique, R = forme vide (AS, portée, soins).',
+b:'Kraken Slayer → Blade of the Ruined King → Wit\'s End / Death\'s Dance · Berserker · Tempo Létal ou Conquérant',
+p:'Full clear rapide (E sur les gros camps), scaling AS avec le passif : chaque kill/camp épique t\'agrandit. Prends les grubs (8:00) et le dragon : ta forme R en profite. Duel avec un jungler ? Souvent oui après 1 objet.',
+m:[['Kindred','Elle kite ton Q : gank et objectifs plutôt que duel.'],['Rammus','Il te contre en full AS : arrête d\'AA sous son W, joue les objectifs.'],['Jax','Contre-frappe : n\'AA pas sous son E, attends la fin.']],
+k:['Chaque Q a un CD séparé par direction : ne gaspille pas le côté de fuite.','E réduit les dégâts reçus pendant la canalisation : utile pour tanker un poke.'],
+v:'Bonne contre les jungler farmers · Difficile contre les tanks AS-negate (Rammus, Jax) et les CC lourds'},
+
+Blitzcrank:{r:['SUPPORT'],t:'Engage hook',s:['Niveau 2','Niveau 6','1er objet'],
+c:'Q (grab) → E (knock-up via AA) → R (silence + dégâts). Flash + Q sur une cible derrière les sbires. Combo lvl 2 = kill avec un ADC agressif. R pour révéler/silence pendant un fight, pas pour le waveclear.',
+b:'Objet support → Locket / Zeke\'s → Knight\'s Vow · Bottes plaquées / Mobility · Aftershock ou Glacial',
+p:'Lane : se cacher dans le bush, Q sur le support ou l\'ADC qui last-hit. Pré-6 gagner un grab = gagner la lane. Ne pas gaspiller Q sur un tank. Mid game : Q sur le carry adverse dans le brouillard, tu gagnes le fight seul.',
+m:[['Morgana','Son bouclier noir annule le grab : grab quand E est en CD (26 s) ou Q sur elle après.'],['Alistar','Il t\'engage dès que tu rates un Q : vise seulement les cibles sûres.'],['Sivir','Son bouclier annule Q : lance un Q feint, puis le vrai.']],
+k:['Le grab tire en ligne droite : cache-toi derrière un sbire pour l\'angle.','Passif = bouclier quand tu es bas : tu tank plus que tu ne crois.'],
+v:'Bon contre les ADC immobiles · Difficile contre les boucliers de sorts (Morgana, Sivir, Nocturne)'},
+
+Brand:{r:['SUPPORT','MID','JUNGLE'],t:'Mage burst AoE',s:['Niveau 6','1er objet','2 objets'],
+c:'W → Q (stun sur cible enflammée) → E (propagation) → R sur 3 cibles. Combo stun : E → Q. Le passif à 4 stacks explose selon les PV max : idéal vs tanks.',
+b:'Liandry → Rylai ou Blackfire Torch → Rabadon · Bottes du sorcier · Comète (poke) ou Dark Harvest',
+p:'Support : poke W depuis le bush, stun E → Q sur l\'ADC qui approche. Ne W pas sur les sbires (mana). Jungle : E rebondit sur les camps, full clear rapide, gank avec Q stun. Teamfight : R sur 3+ ennemis groupés.',
+m:[['Morgana','Bouclier noir sur l\'ADC : lance E → Q sur elle d\'abord.'],['Braum','Il bloque tes Q et R avec son E : lance E d\'abord (pas un projectile).'],['Sivir','Bouclier de sort : feint puis vrai Q.']],
+k:['Une cible enflammée + Q = stun : E (contact) sert de brûlure rapide.','R rebondit 3 fois : 2 ennemis proches = tout le monde brûle.'],
+v:'Bon contre les compos groupées et les tanks · Difficile contre les assassins (aucun escape)'},
+
+Braum:{r:['SUPPORT'],t:'Tank protection',s:['Niveau 2','Niveau 6','2 objets'],
+c:'Q (slow + 1 stack passif) → AA → AA (stun à 4 stacks, tes alliés peuvent aussi stacker). W (saut sur allié) → Q. E (bouclier) face aux projectiles (annule le premier, réduit le reste). R : knock-up en ligne + slow.',
+b:'Objet support → Locket → Knight\'s Vow / Randuin · Bottes plaquées / Mercury · Guardian ou Aftershock',
+p:'Lane : trade quand ton ADC peut AA (stacks passif). Sauter sur l\'ADC avec W pour peel. Ne fais pas d\'all-in seul. Mid game : E face au poke (Jinx R, Ashe R, Ezreal Q), R pour séparer le fight, W sur le carry.',
+m:[['Leona','Elle engage à travers ton E : Q sur elle quand elle Q ton ADC, garde W pour te replacer.'],['Karma','Poke constant : reste hors portée, E pour bloquer son Q.'],['Zyra','Plantes = dégâts sans projectile : E inutile, joue court.']],
+k:['E bloque aussi les R : Jinx, Ezreal, Ashe, Caitlyn, Miss Fortune (le premier tick).','Ton stun est aussi valide via les AA alliés : ping le focus.'],
+v:'Bon contre les ADC à projectiles et les compos poke · Difficile contre les mages AoE sans projectiles (Zyra, Brand E)'},
+
+Briar:{r:['JUNGLE'],t:'Duelist berserk',s:['Niveau 6','1er objet','2 objets'],
+c:'W (frénésie : saut, AS, soins) → Q (dash + stun + réduction d\'armure) → AA → W recast (morsure, exécute). R : global-ish, cible le premier champion touché, frénésie garantie. Gank : Q depuis un bush, W dès que l\'ennemi fuit.',
+b:'Eclipse / Sundered Sky → Black Cleaver → Death\'s Dance / Sterak · Bottes plaquées · Conquérant',
+p:'Clear rapide sans mana (soins passif). Gank tôt lvl 3 sur une lane sans CC lourd. En W tu attaques la cible la plus proche : entre par le carry, pas par le tank. E (canalisé) pour te calmer si tu risques de mourir sous tour.',
+m:[['Rammus','Il te tue quand tu AA : ne joue pas les fights sur lui, prends les objectifs opposés.'],['Warwick','Il te soigne et te trade en 1v1 : counter-jungle plutôt que duel.'],['Lillia','Elle te kite ton W : gank, ne la chasse pas.']],
+k:['E cancel la frénésie : indispensable pour ne pas mourir sur un tank.','Ton R révèle et fait frénésie sur le premier champion touché : ne le lance pas dans un bush inconnu.'],
+v:'Bonne contre les carries isolés · Difficile contre les tanks CC et l\'anti-soin'},
+
+Caitlyn:{r:['ADC'],t:'ADC portée / contrôle de lane',s:['Niveau 2','2 objets','3 objets'],
+c:'Piège W sur l\'ennemi CC (ou dans un bush) → headshot AA (portée doublée). Poke : Q après E (net) ou après piège. Combo : E → W → AA headshot → Q. R pour finir un fuyard (pas pour ouvrir).',
+b:'Yun Tal → Infinity Edge → Rapid Firecannon / Lord Dominik · Berserker · Fleet (safe) ou Fortitude / Précision',
+p:'Lvl 1–3 : abuse la portée, AA à chaque last-hit ennemi, piège dans les bushes. Push et prends les plaques (permanentes). Mid game : siège les tours avec pièges dans les chemins, garde E comme escape uniquement.',
+m:[['Draven','Il gagne les trades AA : ne trade que via headshot après piège, farm loin.'],['Lucian','Il t\'engage lvl 2 : piège sous toi quand il dash, AA headshot.'],['Ashe','Elle te ralentit : trade court, AA headshot puis recule avant sa W.']],
+k:['Headshot sur un bush = 3 AA d\'un coup : farm en zigzag dans les bushes de lane.','Ton R est bloqué par n\'importe quel ennemi placé devant.'],
+v:'Bonne contre les ADC à courte portée et les lanes passives · Difficile contre les engages lourds (Leona, Nautilus)'},
+
+Camille:{r:['TOP','SUPPORT'],t:'Duelist mobile',s:['Niveau 3','1er objet','2 objets'],
+c:'Q1 → attendre 1,5 s → Q2 (vrais dégâts) : AA entre les deux. E1 (mur) → E2 (saut + stun) → Q1 → AA → W (cône, soins sur le bord) → Q2. R sur le carry isolé : il ne peut pas sortir.',
+b:'Trinity Force → Sterak / Death\'s Dance → Hullbreaker (split) ou Black Cleaver · Bottes plaquées · Grasp (top) ou Conquérant',
+p:'Lvl 1–2 : farm, trade Q1 → AA → Q2. Lvl 3 : E mur → Q pour un trade violent, recule avec le passif (bouclier). Post-6 : R = isole une cible en 1v1, tu gagnes les duels côté. Split push mid game, TP pour les objectifs.',
+m:[['Jax','Contre-frappe ton Q2 : ne finis pas ton combo sous E, joue le CD.'],['Malphite','Tank et ralentit : farm, ne trade pas, side push.'],['Renekton','Il gagne pré-6 : joue safe, E de fuite. Après 2 objets tu le dépasses.']],
+k:['E sur un mur puis saut = escape et engage 1 000 unités : entraîne les angles.','W au bord = soins ; frappe depuis la distance max.'],
+v:'Bonne contre les carries isolés en side · Difficile contre les tanks et les champions à parade / contre-frappe'},
+
+Cassiopeia:{r:['MID','TOP'],t:'Mage DPS sans bottes',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (poison) → E (spam, dégâts bonus sur cible empoisonnée, soins) → W (zone slow, grounding = anti-dash) → R face aux ennemis (stun). Trade : Q → E → E → recule.',
+b:'Rod of Ages ou Liandry → Seraph / Archangel → Rabadon / Zhonya · PAS de bottes (passif) · Conquérant ou Phase Rush',
+p:'Lvl 1–3 : farm avec E (rend du mana sur kill). Poke Q sur l\'ennemi qui last-hit. Post-6 : all-in R (face à toi = stun) → Q → E spam. W posé sur les dash des ennemis. Recall sur Tear + composant.',
+m:[['Yasuo','Le mur bloque Q et R : W (grounding) casse son E, il ne peut pas dash. Trade quand W est posé.'],['Zed','Zhonya. W sur toi quand il R : il ne peut plus dash. Passif : ne compte pas sur la vitesse.'],['Fizz','W quand il saute (E) = il ne peut pas re-dash. R quand il sort de E.']],
+k:['W = ground (aucun dash possible dans la zone) : pose-le sur un Lee Sin, un Yasuo, un Zed.','R stun uniquement si l\'ennemi te regarde : attends qu\'il se retourne pour trade.'],
+v:'Bonne contre les mêlées à dash · Difficile contre le poke longue portée (Xerath, Ziggs)'},
+
+Chogath:{r:['TOP','MID'],t:'Tank scaling',s:['Niveau 6','2 objets','Late game'],
+c:'Q (knock-up retardé) → W (silence cône) → E (épines sur AA). R = exécute selon PV max + stacks de taille. Trade : W → Q → AA E. Ne pas rater Q : lance-le sur un ennemi qui recule ou qui AA.',
+b:'Heartsteel → Sunfire / Jak\'Sho → Thornmail / Kaenic Rookern · Mercury / plaquées · Grasp (top) ou Aftershock',
+p:'Lvl 1–5 : farm, W pour couper un trade, tank les tours. Tu stack R sur les sbires (tue le cannon). Mid game : frontline, Q derrière l\'ennemi pour l\'arrêter dans sa fuite, R sur le carry bas ou sur un objectif (exécute Baron/dragon !).',
+m:[['Darius','Il te saigne : farm loin, Q quand il E. Ne trade pas pré-6, tu gagnes en late.'],['Vayne','% PV max : ne la chasse pas, side push, joue les fights à 5.'],['Fiora','Vitals sur un tank : farm et prends les objectifs, jamais de 1v1.']],
+k:['R sur un dragon / Baron = smite renforcé pour ton jungler.','Q de 0,5 s de délai : lance-le où l\'ennemi va, pas où il est.'],
+v:'Bon contre les mêlées sans dash · Difficile contre les % PV (Vayne, Kog\'Maw) et l\'anti-tank'},
+
+Corki:{r:['MID','ADC'],t:'Marksman poke hybride',s:['2 objets','Niveau 11','3 objets'],
+c:'Q (bombe, révèle) → AA (passif magique) → E (gatling, réduit armure/RM) → R spam (missiles, gros missile toutes les 3 charges). W (valkyrie) pour esquiver ou fuir. Poke : R longue portée à chaque approche.',
+b:'Trinity Force → Muramana → Infinity Edge / Lord Dominik · Berserker ou Ionian · Fleet ou Précision',
+p:'Lvl 1–5 : farm, poke R sur l\'ennemi qui last-hit. Ne pas fight lvl 3. Post-6 : missiles = siège et poke des objectifs. Mid game : R spam avant les fights, W pour sortir, Trinity = ton pic.',
+m:[['Zed','Il te tue post-6 : W en réponse à son R, Zhonya pas possible → Wit\'s End ou Death\'s Dance.'],['Yasuo','Mur bloque tes missiles : R depuis un angle où il n\'est pas.'],['Kassadin','Tue-le pré-11 avec des R, push et roam.']],
+k:['Le gros missile (3e) fait le double : garde-le pour le carry.','W laisse une traînée de feu : passe dessus l\'ennemi qui te chasse.'],
+v:'Bon contre les mêlées et les mages lents · Difficile contre les assassins et les boucliers de sorts'},
+
+Darius:{r:['TOP'],t:'Juggernaut',s:['Niveau 3','Niveau 6','1er objet'],
+c:'AA → W (frappe ralentissante) → Q (bord de la hache = soins + stack) → E (grappin) quand l\'ennemi fuit → AA. À 5 stacks : R (dégâts selon stacks, reset au kill). Ghost + all-in lvl 6.',
+b:'Sundered Sky ou Trinity → Sterak → Death\'s Dance / Black Cleaver · Bottes plaquées · Conquérant + Ghost',
+p:'Lvl 1–3 : tu gagnes tous les trades corps à corps ; force l\'ennemi loin de la wave avec Q bord. Farm = ton adversaire perd des CS sous menace. Post-6 : all-in dès 3 stacks. Mid game : side lane, TP sur les fights, tu es la menace n°1 en 2v2.',
+m:[['Vayne','Kite : ne la chasse pas, farm à portée de Q, demande un gank à 3 stacks.'],['Kennen','Il poke et fuit : AA à chaque last-hit ennemi, E quand il approche, Second Wind.'],['Quinn','Elle te bloque et poke : farm, tu gagnes si tu la touches une fois avec E.']],
+k:['Le bord du Q soigne : positionne-toi pour toucher au bout de la hache.','R reset sur kill : en teamfight, ne R pas le tank, R la cible qui va mourir.'],
+v:'Bon contre les mêlées sans mobilité · Difficile contre le kite et le poke à distance'},
+
+Diana:{r:['JUNGLE','MID'],t:'Assassine burst AoE',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (arc, marque) → E (dash sur cible marquée = CD reset) → AA (passif 3e coup) → W (orbes + bouclier) → R (tire tous les ennemis proches). Gank : W → Q → E → R. Après un Q sur plusieurs cibles, E reset sur chacune.',
+b:'Nashor\'s Tooth ou Lich Bane → Shadowflame / Zhonya → Rabadon · Bottes du sorcier / Ionian · Conquérant ou Électrocution',
+p:'Jungle : full clear rapide (W + passif), gank la lane avec un ennemi avancé lvl 4–6. Post-6 : R multi-cibles = engage de teamfight. Mid : farm au Q lvl 1–5, all-in post-6 quand ton Q touche.',
+m:[['Rammus','Il te contre en AA : joue les objectifs, R sur son carry pas sur lui.'],['Lillia','Elle kite tes E : gank, ne la duel pas.'],['Zac','Il tank ton R : engage sur son carry pendant qu\'il est loin.']],
+k:['Q + E reset = 2 dashes : le second pour sortir ou finir.','R sur 2+ cibles = stun de zone et dégâts doublés.'],
+v:'Bonne contre les carries groupés · Difficile contre les tanks et les compos poke à portée'},
+
+Draven:{r:['ADC'],t:'ADC snowball',s:['Niveau 2','1er objet','2 objets'],
+c:'Q (hache tournante) → AA en rattrapant les haches (2 Q en rotation) → W (AS + vitesse) → E (knock-aside) sur celui qui approche. R aller-retour sur les fuyards. Tout trade : 2 haches + E.',
+b:'Bloodthirster ou Yun Tal → Infinity Edge → Lord Dominik · Berserker · Précision (PTA) ou Hail of Blades',
+p:'Lvl 1 : tu gagnes tous les trades : AA + hache dès que l\'ADC ennemi last-hit. Lvl 2 avant lui = kill possible avec support engage. Récupère les haches sans te mettre en danger (cible la zone d\'atterrissage). Cash-in du passif = objet en avance : cherche le kill à 300+ stacks.',
+m:[['Caitlyn','Portée : ne chasse pas les pièges, joue les haches derrière la wave, all-in lvl 2 uniquement.'],['Ashe','Elle te ralentit : E quand elle W, engage vite ou pas du tout.'],['Ezreal','Il poke et fuit : push et prends les plaques, il ne peut pas te tuer en 1v1.']],
+k:['Les haches tombent dans la direction de ton déplacement : marche vers où tu veux les récupérer.','E interrompt les dashes (Lee Sin, Vi, Leona E).'],
+v:'Bon contre les lanes passives et les supports mêlée · Difficile contre le poke longue portée et les CC lourds'},
+
+DrMundo:{r:['TOP','JUNGLE'],t:'Tank regen',s:['Niveau 6','2 objets','Late game'],
+c:'Q (couperet, slow + soins de PV) → E (frappe, AA renforcée, plus fort sur PV manquants) → W (brûlure + réduit les dégâts, recast pour soins). R : soins massifs + vitesse. Passif : immunité au premier CC (canette).',
+b:'Heartsteel → Spirit Visage / Warmog → Thornmail / Jak\'Sho · Bottes plaquées ou Mercury · Grasp',
+p:'Lvl 1–5 : farm, Q pour last-hit à distance. Ne trade pas pré-6, tank les pokes avec passif. Post-6 avec Heartsteel : deviens inarrêtable en side lane, TP pour les objectifs, tu tank Baron seul.',
+m:[['Fiora','Elle t\'exécute avec les vitals : jamais de 1v1, side push et joue à 5.'],['Vayne','% PV max : tu ne peux pas la chasser, farm et TP.'],['Kayle','Elle scale mieux : tue-la pré-6 avec Q + E ou joue le TP.']],
+k:['La canette du passif bloque un CC : reprends-la pour 4 % de PV.','R soigne selon les PV manquants : lance-le bas, pas au début du fight.'],
+v:'Bon contre les mêlées et les mages burst · Difficile contre le % PV et l\'anti-soin'},
+
+Ekko:{r:['JUNGLE','MID'],t:'Assassin mobile AP',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (lance, revient) → AA (passif 3 coups) → E (dash, AA renforcée) → W (zone stun retardée). All-in : W posé derrière → Q → E → AA → R (retour + soins + AoE) au bon endroit. Poke : Q aller-retour.',
+b:'Lich Bane ou Hextech Gunblade → Shadowflame / Zhonya → Rabadon · Bottes du sorcier · Électrocution ou Conquérant',
+p:'Jungle : full clear (passif), gank post-3 sur ennemi avancé. R = ta sécurité : entre agressif, R pour sortir. Mid : trade Q + passif, tu gagnes post-6 en all-in. Ta zone W est ton anti-gank.',
+m:[['Lillia','Trop rapide : joue les objectifs.'],['Nunu','Il te vole les camps et te chasse : pathing opposé, ne fight pas.'],['Fizz','Il esquive ton Q : trade uniquement après son E.']],
+k:['R est aussi un soin : tu peux tank un fight, R, revenir.','W posé au moment du recall ennemi = stun sous tour.'],
+v:'Bon contre les compos groupées · Difficile contre les tanks CC et les compos avec pinks (ton R laisse une trace)'},
+
+Elise:{r:['JUNGLE'],t:'Assassine early',s:['Niveau 3','1er objet','2 objets'],
+c:'Humain : E (cocon, stun) → Q (dégâts selon PV actuels) → W → forme araignée R → Q (PV manquants) → W (AS) → E (rappel, invulnérable). Gank : E cocon → all-in. Dive : E araignée pour sortir.',
+b:'Liandry ou Hextech Rocketbelt → Shadowflame / Zhonya → Rabadon · Bottes du sorcier · Électrocution ou Dark Harvest',
+p:'Clear 3 camps puis gank lvl 3 (cocon = kill avec presque tout laner). Tu es forte de 3 à 15 min : invade, gank, force les objectifs tôt (grubs 8:00). Post-20 min tu baisses : deviens la vision et le pick.',
+m:[['Graves','Il te bat en duel et te vole : gank plus vite que lui, évite son côté.'],['Lillia','Elle scale mieux : gank tôt, snowball avant 15 min.'],['Warwick','Il te sent quand tu es bas : ne fais pas un gank à 50 % PV.']],
+k:['E araignée = 2 s d\'intouchabilité : esquive un R ennemi.','Le cocon révèle : lance-le dans un bush pour scouter.'],
+v:'Bonne contre les laners immobiles early · Difficile contre les tanks et les jungler farmers late'},
+
+Evelynn:{r:['JUNGLE'],t:'Assassine furtive',s:['Niveau 6','2 objets','Niveau 11'],
+c:'W (charme, 2,5 s de délai) → Q (dagger, la 1re marque) → E (AA renforcée) → Q spam → R (exécute selon PV manquants, saut arrière). Approche invisible post-6 : W avant d\'être vue, Q quand le charme s\'active.',
+b:'Lich Bane → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Électrocution',
+p:'Pré-6 : full clear, ne gank pas sauf lane très avancée. Post-6 : gank les lanes sans pink, cible les carries isolés. Tu scales à 2 objets : force les picks dans le brouillard, ton R sécurise les kills et la sortie.',
+m:[['Warwick','Il te sent : ne gank pas bas, joue l\'autre côté.'],['LeeSin','Il te trouve avec Q et te bat en duel : farm, gank après 6.'],['RekSai','Elle te voit avec le tremblement : approche hors de son W.']],
+k:['Le charme W se déclenche 2,5 s après : commence-le hors de portée de vision.','R en arrière = escape sur un mur ; ne l\'utilise pas seulement pour finir.'],
+v:'Bonne contre les carries sans pinks · Difficile contre les compos avec vision de contrôle et les tanks'},
+
+Ezreal:{r:['ADC','MID'],t:'Marksman poke mobile',s:['2 objets','Niveau 11','3 objets'],
+c:'Q spam (réduit les CD) → W sur l\'ennemi → AA ou Q pour exploser W (dégâts + mana). E (blink) en dernier recours, jamais en avant sans vision. R longue portée sur les objectifs / waves / fuyards.',
+b:'Muramana (Tear early) → Trinity Force → Iceborn Gauntlet ou Navori / Lord Dominik · Ionian · Précision (PTA) ou Conquérant',
+p:'Lvl 1–5 : farm au Q, poke Q + W quand l\'ennemi last-hit. Tu es faible avant Muramana + Trinity : ne meurs pas. Mid game : poke avant les objectifs, E = ton escape. Late : kite infini.',
+m:[['Draven','Il te tue en duel : farm derrière la wave, poke Q, E de fuite. Push et prends les plaques.'],['Lucian','Il all-in lvl 2 : garde E, trade uniquement quand son E est en CD.'],['Caitlyn','Elle te poke plus loin : reste hors de portée, Q sur elle via les sbires.']],
+k:['Q applique les effets on-hit (Sheen) : Q entre chaque AA.','W sur un allié puis E = tu peux traverser.'],
+v:'Bon contre les compos lentes · Difficile contre les engages et les boucliers de sorts'},
+
+Fiddlesticks:{r:['JUNGLE','SUPPORT'],t:'Engage teamfight',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (peur, doublé si hors de vision) → W (drain) → E (slow, silence). Gank : depuis un bush hors vision → Q peur → W. R : canalisation 1,5 s puis saut → drain AoE. Combo : R depuis le brouillard → Q → W → E.',
+b:'Liandry ou Rylai → Zhonya → Rabadon · Bottes du sorcier / Ionian · Électrocution ou Dark Harvest',
+p:'Full clear avec W (soins). Ta force = les ganks hors vision : approche par le brouillard pour la peur passive. Post-6 : place-toi dans un bush avant un objectif, R quand 3 ennemis sont groupés. Épouvantails (passif) = vision gratuite.',
+m:[['Nunu','Il te vole les camps : commence côté opposé, ne fight pas.'],['Kindred','Elle te kite et te poke : gank, objectifs.'],['LeeSin','Il te trouve pendant R (canalisation) : engage hors de sa vision.']],
+k:['Peur passive : si l\'ennemi ne te voit pas avant que tu attaques, il est effrayé.','Les épouvantails sont des wards gratuites : place-les avant chaque objectif.'],
+v:'Bon contre les compos groupées sans pink · Difficile contre les compos avec vision et les interruptions de canalisation'},
+
+Fiora:{r:['TOP'],t:'Duelist',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (lunge) sur un vital → AA → E (2 AA : slow puis crit) → Q sur le prochain vital. W (riposte) uniquement sur un CC ou un gros sort, jamais à l\'aveugle. R sur la cible : 4 vitals = kill + soins.',
+b:'Ravenous Hydra → Trinity Force → Sterak / Death\'s Dance · Bottes plaquées · Conquérant ou Grasp',
+p:'Lvl 1 : trade sur les vitals avec Q + AA, sors sur E ennemi. Tu gagnes tous les 1v1 après 1 objet : side lane, push, TP quand nécessaire. Mid game : ton job = pression side, forcer 2 ennemis à venir.',
+m:[['Malphite','Il tank tes vitals : farm, side push, joue le map. Q les vitals seulement en fight à 5.'],['Renekton','Il gagne lvl 1–5 : joue safe, riposte son W (stun). Après 1 objet, tu domines.'],['Kled','Il te dismount : W son E, trade quand il est à pied.']],
+k:['W = contre-CC : ripostes Darius E, Nasus W, Renekton W = stun gratuit.','Vitals : tourne autour de l\'ennemi pour faire apparaître le bon côté.'],
+v:'Bonne contre les mêlées et les tanks · Difficile contre les CC à distance et les compos qui la kite'},
+
+Fizz:{r:['MID'],t:'Assassin mobile',s:['Niveau 6','1er objet','2 objets'],
+c:'W (AA renforcée, dégâts sur PV manquants) → Q (dash sur cible) → E (saut, intouchable) → AA. Full : R (requin, gros dégâts si lancé à distance max) → Q → W → E. Trade lvl 2 : W + Q, sors sur E.',
+b:'Lich Bane ou Hextech Gunblade → Shadowflame / Zhonya → Rabadon · Bottes du sorcier · Électrocution',
+p:'Lvl 1–5 : farm, trade Q + W et sors avec E. Post-6 : all-in dès que ton R touche. Roam avec R up. E est ton sort de survie : garde-le pour esquiver le CC clé.',
+m:[['Galio','Sa W annule tout : all-in quand W est en CD, sinon farm et roam.'],['Malzahar','Bouclier passif et R : casse le bouclier avec W avant tout, QSS obligatoire.'],['Lissandra','Elle te CC dans ton combo : E après son W, pas avant.']],
+k:['E rend intouchable 0,7 s + le saut : esquive Syndra R, Annie R, Lux R.','R à distance max = plus de dégâts et plus de slow.'],
+v:'Bon contre les mages immobiles · Difficile contre les tanks CC et les boucliers'},
+
+Galio:{r:['MID','SUPPORT','TOP'],t:'Tank anti-mage',s:['Niveau 3','Niveau 6','2 objets'],
+c:'Q (vent, dégâts + zone) → W (charge, taunt + réduction magique) → E (dash, knock-up) → AA passif. R : saut sur un allié, knock-up en arrivant — utilise-le pour sauver ton carry. Combo : E → AA → W → Q.',
+b:'Hollow Radiance ou Kaenic Rookern → Zhonya → Abyssal Mask / Thornmail · Mercury · Aftershock (mid) ou Comète (poke)',
+p:'Mid : farm, W sur les trades ennemis (réduction), roam avec R vers bot dès 6. Support : engage E → W, R sur ton ADC en danger. Tu gagnes en teamfight : W taunt 2–3 ennemis, R pour rentrer.',
+m:[['Zed','Il te tue quand tu es bas : W pendant son R, Zhonya. Reste sous tour post-6.'],['Talon','Roam plus vite que toi : ping ses absences, R pour aider.'],['Kassadin','Il scale : tue-le pré-11 avec E → Q, push et roam.']],
+k:['R protège aussi le vaisseau : taunt + knock-up sur les ennemis autour de l\'allié.','E peut être interrompu par un mur : vise dans un couloir.'],
+v:'Bon contre les mages et les assassins AP · Difficile contre les mages poke à portée (Xerath, Ziggs) et les AD'},
+
+Gangplank:{r:['TOP','MID'],t:'Scaling burst à distance',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Q (parlay, or bonus) sur les sbires → tonneaux E : 3 stacks, 1 stack = explosion. Combo : E → Q (explosion instantanée) ; chaîne 2 tonneaux pour la portée. W (remède) pour purge un CC. R global sur les fights.',
+b:'Trinity Force ou Essence Reaver → Infinity Edge → Collector / Lord Dominik · Ionian / Berserker · Grasp ou Précision',
+p:'Lvl 1–5 : farm au Q, tonneaux sur les vagues pour l\'or. Ne trade pas au corps à corps. Post-6 : R sur les fights bot/dragon depuis top. Mid game : side lane avec tonneaux = tu zones tout seul ; TP pour les fights.',
+m:[['Renekton','Il te bat lvl 1–6 : farm loin, W son stun, place les tonneaux entre toi et lui.'],['Irelia','Elle dash sur toi via les tonneaux : casse-les vite, W sa stun.'],['Malphite','Tank : joue le map, R pour les fights, ignore le 1v1.']],
+k:['Un tonneau à 1 PV explose instantanément avec Q ou AA : place-le à 1 stack avant l\'ennemi.','R sur une lane loin = un fight gagné sans y être.'],
+v:'Bon contre les mêlées lentes en late · Difficile contre les dashers early (Irelia, Renekton)'},
+
+Garen:{r:['TOP'],t:'Bruiser simple',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (silence + vitesse) → AA renforcée → E (spin, 7 coups) → W (réduction + tenacité) → R (exécute selon PV manquants). Trade : Q → E complet → recule en régénérant (passif).',
+b:'Stridebreaker → Black Cleaver / Phantom Dancer → Sterak / Death\'s Dance · Bottes plaquées / Mercury · Conquérant ou Phase Rush',
+p:'Lvl 1–3 : trade Q + E dès que l\'ennemi last-hit, recule pour régénérer. Post-6 : tue quand R exécute (barre de vie ennemie). Side lane : push et TP, tu gagnes les 1v1 sans mobilité. Villain (passif) = ton carry cible.',
+m:[['Vayne','Kite : joue derrière ta wave, Q pour la silencer et l\'atteindre, gank.'],['Quinn','Poke à distance : Q quand elle approche, farm.'],['Darius','Il gagne les trades longs : Q → E puis pars avant 3 stacks.']],
+k:['E tourne plus vite avec l\'AS : le Stridebreaker complète parfaitement.','R sur le Villain = dégâts bonus, cherche-le en fight.'],
+v:'Bon contre les mêlées sans mobilité · Difficile contre le kite et les compos qui l\'ignorent'},
+
+Gnar:{r:['TOP'],t:'Carry à distance / tank transformé',s:['Niveau 6','1er objet','2 objets'],
+c:'Mini : Q (boomerang, revient) → AA (passif 3 coups) → E (saut, AS). Mega : E (saut, slow) → W (stun) → Q (rocher) → R (jette les ennemis contre un mur = stun). Contrôle la barre de rage : transforme-toi au bon moment.',
+b:'Trinity Force ou Black Cleaver → Sterak → Frozen Heart / Thornmail · Bottes plaquées · Fleet ou Grasp',
+p:'Mini : poke AA + Q, tu kite les mêlées. Mega : engage. Ne te transforme pas près de la tour ennemie. Mid game : TP sur les fights avec Mega R contre un mur = fight gagné.',
+m:[['Renekton','Il te dash en Mini : joue à portée max, Mega pour trade.'],['Irelia','Elle te colle : E de fuite en Mini, ne trade pas en lane sans rage.'],['Malphite','Il tank tout : farm et joue le map.']],
+k:['La rage se voit sur la barre : à 100, tu es Mega au prochain sort.','R Mega contre un mur = 1,75 s de stun sur toute l\'équipe.'],
+v:'Bon contre les mêlées lentes · Difficile contre les dashers et le poke'},
+
+Gragas:{r:['JUNGLE','TOP','MID','SUPPORT'],t:'Tank engage / burst',s:['Niveau 6','1er objet','2 objets'],
+c:'E (charge, stun) → Q (tonneau, chargé = plus de dégâts) → W (AA renforcée, réduction de dégâts) → R (explosion, repousse). Combo flash : Flash + R pour projeter le carry vers ton équipe. E → AA → Q.',
+b:'Jungle : Liandry ou Rylai → Zhonya. Top : Hollow Radiance / Sunfire → Kaenic → Thornmail · Mercury / plaquées · Aftershock ou Électrocution',
+p:'Jungle : clear avec Q + W (soins passif), gank E → Q. Post-6 : R pour séparer ou envoyer un carry sur ton équipe. Top : trade W → Q, frontline. Ton R est un disengage : garde-le pour annuler l\'engage adverse.',
+m:[['Nunu','Il te vole les camps : commence par le buff opposé.'],['Kindred','Kite : gank, objectifs.'],['Fiora','Elle te tue en 1v1 top : joue le map.']],
+k:['R repousse : envoie le bruiser adverse loin de ton carry, ou le carry adverse vers ton équipe.','E interrompt les canalisations (Fiddle, Katarina, Nunu).'],
+v:'Bon contre les compos qui engagent · Difficile contre le poke et les anti-tanks'},
+
+Graves:{r:['JUNGLE','TOP'],t:'Marksman jungler',s:['Niveau 3','1er objet','2 objets'],
+c:'AA (2 balles, puis rechargement) → E (dash, recharge une balle + armure) → Q (2 explosions) → AA. R pour finir ou pour reculer (recul). Trade : E → AA → Q → AA.',
+b:'Collector ou Eclipse → Black Cleaver / The Collector → Infinity Edge / Lord Dominik · Berserker / plaquées · Fleet ou Précision',
+p:'Full clear le plus rapide du jeu (AA touchent plusieurs cibles) → counter-jungle. Duel dès 1 objet. Gank les lanes avancées avec E + Q. Objectifs : tu les prends seul. Ton R sécurise les smite fights.',
+m:[['Elise','Elle gank plus vite que toi : farm et invade son 2e quart quand elle gank.'],['Rammus','Il te tank tout : joue objectifs.'],['Jax','Contre-frappe tes AA : ne fight pas sous E.']],
+k:['E recharge une balle : E → AA → AA → AA.','R en arrière = disengage ; ton R traverse les murs.'],
+v:'Bon contre les jungler faibles early · Difficile contre les tanks armure et les CC'},
+
+Gwen:{r:['TOP','JUNGLE'],t:'Duelist AP AS',s:['Niveau 6','1er objet','2 objets'],
+c:'AA (passif % PV) → Q (ciseaux, vrais dégâts au centre, stacks via AA) → E (dash, AS) → W (brume : intouchable aux sorts extérieurs). R : 3 casts, slow + dégâts. Combo : E → AA → AA → Q (4 stacks) → R → AA.',
+b:'Nashor\'s Tooth → Riftmaker → Rabadon / Zhonya · Bottes du sorcier · Conquérant',
+p:'Lvl 1–5 : farm, trades courts E → AA → Q. Ta brume W te sauve des ganks à distance : joue près des sbires. Post-6 avec Nashor : tu gagnes les 1v1, side lane, TP. En teamfight, brume sur le carry adverse.',
+m:[['Malphite','Il t\'engage à travers la brume et te tank : farm, side push, joue le map.'],['Ambessa','Trades courts plus forts pré-objet : joue la brume, tu gagnes à 2 objets.'],['Vayne','Kite : ne la chasse pas, E derrière la wave, brume vs ses tirs.']],
+k:['W bloque les sorts venus de l\'extérieur : Ezreal Q, Karma Q, Ashe R.','Le Q à 4 stacks au centre = vrais dégâts : place-toi pour le centre.'],
+v:'Bonne contre les tanks et les mêlées · Difficile contre les tanks CC et le kite'},
+};
+
+/* fiches H → M */
+Object.assign(FICHES_DEFAULT, {
+Hecarim:{r:['JUNGLE'],t:'Bruiser engage vitesse',s:['Niveau 6','1er objet','2 objets'],
+c:'E (charge : knock-back) → Q spam (stacks, dégâts croissants) → W (soins de zone). R : charge + peur, pour engager ou fuir. Gank : E depuis loin (plus de vitesse = plus de dégâts) → R si l\'ennemi a un dash.',
+b:'Sundered Sky ou Trinity Force → Black Cleaver → Sterak / Death\'s Dance · Ionian / plaquées · Conquérant ou Phase Rush',
+p:'Full clear en Q spam, gank lvl 4 les lanes où l\'ennemi est avancé (ta vitesse = ta portée). Objectifs : Q spam les fait vite. Post-6 : engage R sur le backline puis E + Q, ou R pour sortir. Ghost + vitesse = ton pic.',
+m:[['Nunu','Il te vole les camps : commence côté opposé, gank tôt.'],['Rammus','Il te contre : joue les fights à 5 et les objectifs.'],['Lillia','Elle te kite : engage seulement avec R.']],
+k:['E en courant longtemps = plus de dégâts et de knock-back.','R est aussi un disengage : peur sur les poursuivants.'],
+v:'Bon contre les carries sans escape · Difficile contre les CC lourds et les tanks'},
+
+Heimerdinger:{r:['MID','TOP','SUPPORT'],t:'Mage siège / zone',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (tourelle, 3 max, stack-les dans un bush ou sous ta tour) → W (missiles) → E (stun rebondit). R + E = stun de zone ; R + Q = grosse tourelle ; R + W = burst. Combo kill : E → R W. Trade : tourelles posées puis W.',
+b:'Liandry → Rylai / Blackfire Torch → Rabadon / Zhonya · Bottes du sorcier · Comète ou Aery',
+p:'Lvl 1–5 : 3 tourelles derrière tes sbires = lane injouable pour les mêlées. Push et prends les plaques. Post-6 : R E stun → W = kill. En mid game, tourelles sur les objectifs 60 s avant le spawn, sous ta tour en défense.',
+m:[['Zed','Il te tue post-6 : Zhonya, tourelles autour de toi, E quand il sort de R.'],['Sylas','Il vole ton R : garde-le hors de portée ou en CD.'],['Tryndamere','Il ignore tes tourelles : E stun, push, ne 1v1 pas en side.']],
+k:['Une tourelle dans un bush = vision + dégâts pendant les recalls.','R Q (grosse tourelle) tank une tour et prend une plaque.'],
+v:'Bon contre les mêlées et les dashers · Difficile contre le poke longue portée et les assassins mobiles'},
+
+Hwei:{r:['MID','SUPPORT'],t:'Mage polyvalent',s:['Niveau 6','1er objet','2 objets'],
+c:'Menus : Q (dégâts), W (utilité), E (contrôle), R après tout. Combos : EE (attraction) → QQ (feu) ; EW (root) → QW (exécute) ; EQ (peur) → QE (zone). Défense : WW (bouclier), WQ (vitesse). Burst full : E → Q → R.',
+b:'Luden\'s Echo → Shadowflame / Liandry → Rabadon / Zhonya · Bottes du sorcier · Comète ou Électrocution',
+p:'Lane : farm avec QQ / QE, poke QE sur l\'ennemi qui last-hit. Ne combo pas sans un E qui touche. Post-6 : R (marque + explosion) pour finir une cible ou exploser une wave groupée. Support : EE + QQ, WW sur l\'ADC.',
+m:[['Yasuo','Mur bloque Q : lance E d\'abord, puis Q quand le mur est posé.'],['Zed','Zhonya, EW root quand il R, sinon WQ pour fuir.'],['Fizz','E de Fizz esquive : lance E après son saut.']],
+k:['Hors combat, ta prochaine ouverture est gratuite : prépare-la avant de push.','R sur une cible marquée par E = burst maximal.'],
+v:'Bon contre les mages immobiles et les lanes lentes · Difficile contre les assassins et les dashers'},
+
+Illaoi:{r:['TOP'],t:'Juggernaut zone',s:['Niveau 3','Niveau 6','1er objet'],
+c:'E (esprit) → les tentacules frappent l\'esprit = dégâts sur la cible. W (saut, AA renforcée, dégâts % PV, active les tentacules) → Q (tentacule). R : plante des tentacules autour de toi, réduit les dégâts. Combo : E → Q → W → R.',
+b:'Sundered Sky ou Black Cleaver → Sterak → Death\'s Dance / Thornmail · Bottes plaquées · Conquérant ou Grasp',
+p:'Lvl 1–5 : place les tentacules (passif) dans la lane, W sur l\'ennemi qui approche. E sur l\'ennemi qui recule = tu le puni en frappant l\'esprit. Post-6 : R dans un fight = 1v2 possible. Tu es fort en side, faible en teamfight ouvert.',
+m:[['Vayne','Kite : ne la chasse pas, E quand elle vient, farm.'],['Jax','Il esquive ton W avec E : trade uniquement quand son E est en CD.'],['Kennen','Poke à distance : E sur lui quand il approche, joue sous la tour.']],
+k:['E réussi = l\'ennemi doit tuer l\'esprit ou fuir : tu gagnes la wave.','R sur plusieurs tentacules = ton pic de dégâts ; lance-le dans un couloir.'],
+v:'Bonne contre les mêlées sans mobilité · Difficile contre le kite et les dashers'},
+
+Irelia:{r:['TOP','MID'],t:'Duelist dash',s:['Niveau 3','1er objet','2 objets'],
+c:'Q sur un sbire marqué (E ou dernier coup) = reset. E1 → E2 (stun en ligne) → Q sur la cible → AA (passif 4 stacks = AS). R (mur de lames : désarme puis root) puis Q. All-in : E → Q → R → AA → Q reset.',
+b:'Blade of the Ruined King → Trinity Force / Wit\'s End → Sterak / Death\'s Dance · Bottes plaquées / Berserker · Conquérant',
+p:'Lvl 1 : Q sur les sbires bas pour dash et trade, passif à 4 stacks avant de trade. Lvl 2 : E → Q = trade gagnant. Post-6 : all-in avec R. Tu es une reine des trades courts et du reset : en teamfight, Q sur les sbires pour rejoindre le carry.',
+m:[['Malphite','Il tank tout et te ralentit : farm, side push.'],['Renekton','Il gagne lvl 1–5 : farm, Q sur les sbires bas pour éviter les stuns.'],['Fiora','Elle pare ton E : lance E tard, trade quand W est en CD.']],
+k:['Q sur un sbire à moins de la barre rouge = reset : regarde les PV des sbires.','R = désarme + root si l\'ennemi traverse : place-le derrière lui.'],
+v:'Bonne contre les mages immobiles et les carries · Difficile contre les tanks CC et les champions à parade'},
+
+Ivern:{r:['JUNGLE'],t:'Support jungler',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (root + dash vers la cible) → E (bouclier explosif sur allié = slow) → W (bush). R : Daisy (knock-up sur le 3e coup). Gank : Q depuis le bush, E sur ton laner qui approche. Ne combat pas seul.',
+b:'Objet support ou Moonstone → Redemption → Locket / Shurelya · Ionian · Guardian ou Aery',
+p:'Marque les camps (passif), reviens les libérer : pas de fight sur les camps. Gank lvl 3 avec Q root, donne les buffs à tes carries. Post-6 : Daisy tank les objectifs, toi tu shield et root. En teamfight : bouclier sur le carry, Q sur l\'ennemi qui dive.',
+m:[['Khazix','Il te tue quand tu es isolé : joue avec tes laners.'],['LeeSin','Invade dès lvl 2 : ward ton buff et fuis, ne fight pas.'],['Kindred','Elle prend tes camps marqués : libère-les vite.']],
+k:['Q root puis dash : tu peux traverser un mur en dashant sur la cible.','W (bush) rend invisible et soigne les alliés : escape et vision.'],
+v:'Bon avec des carries hyper (Jinx, Kog\'Maw) · Difficile contre les invades early'},
+
+Janna:{r:['SUPPORT'],t:'Enchanteresse disengage',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (tornade, chargé = plus loin, knock-up) → W (slow + dégâts) → E (bouclier + AD sur l\'allié). R : repousse et soigne. Peel : Q sur l\'engage → E sur le carry → R si dive. Trade : W + AA (vitesse passive).',
+b:'Objet support → Shurelya / Moonstone → Redemption / Ardent Censer · Ionian / Mobility · Aery ou Guardian',
+p:'Lane : ne trade pas, protège. Q pour annuler tout engage (Leona E, Alistar W, Blitz grab). Bouclier E sur l\'ADC qui trade = il gagne. Mid game : reste avec le carry, R quand 2+ ennemis dive.',
+m:[['Blitzcrank','Reste derrière les sbires ; si l\'ADC est grab, E bouclier sur lui et Q pour repousser le follow-up.'],['Pyke','Il engage et repart : Q dès qu\'il utilise E, R pour repousser.'],['Zyra','Poke : reste hors de portée, E sur l\'ADC.']],
+k:['Q non chargée = knock-up instantané : bloque les dashes (Lee Sin R, Vi Q).','R canalisé : les ennemis sont repoussés au lancement, tu peux le couper.'],
+v:'Bonne contre les engages · Difficile contre le poke longue portée'},
+
+JarvanIV:{r:['JUNGLE'],t:'Bruiser engage',s:['Niveau 3','Niveau 6','1er objet'],
+c:'E (drapeau) → Q (vers le drapeau = knock-up + dash) → AA (passif % PV) → W (slow + bouclier). R : cage sur 1 ou 2 cibles. Combo gank : E Q → AA → R. Flash + E Q pour engager de loin.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Full clear rapide (E + Q sur les camps), gank lvl 3 : E Q = knock-up garanti. Objectifs : tu es fort tôt, force grubs et dragon. Post-6 : cage sur le carry en teamfight, ou sur toi-même pour survivre un dive.',
+m:[['Nunu','Il te vole les camps : commence par le buff opposé.'],['Lillia','Elle te kite : engage seulement avec R.'],['Kindred','Kite : gank, objectifs, ne duel pas.']],
+k:['E Q vers un mur = escape ou dive.','La cage R piège aussi tes alliés : place-la sur le carry adverse loin de ton équipe.'],
+v:'Bon contre les carries sans escape · Difficile contre les tanks et les compos disengage'},
+
+Jax:{r:['TOP','JUNGLE'],t:'Duelist scaling',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (saut) → W (AA renforcée) → E (contre-frappe : esquive les AA, stun à la fin). All-in : E → Q → W → AA → E stun (recast). R passif : 3e AA = bonus ; R actif : armure/RM. Trade : W → AA → E → recule.',
+b:'Trinity Force ou Sundered Sky → Sterak / Death\'s Dance → Wit\'s End / Titanic · Bottes plaquées · Grasp (top) ou Conquérant',
+p:'Lvl 1–5 : farm, trade E quand l\'ennemi AA. Post-6 : tu gagnes les 1v1 avec R. Side lane : push, saute sur les wards pour fuir. TP pour les objectifs, tu gagnes tous les fights isolés en late.',
+m:[['Malphite','Il te ralentit et t\'AS-negate : farm, side push.'],['Teemo','Il t\'aveugle : Q → E → W, mais ne chasse pas. Farm à distance.'],['Garen','Il tank ton E : ne trade que si E stun touche.']],
+k:['E esquive tous les AA (même à distance : ADC, Vayne) : lance-le sur les cibles AA.','Q sur une ward ou un sbire = escape.'],
+v:'Bon contre les carries AA et les mêlées · Difficile contre les tanks CC et les mages'},
+
+Jayce:{r:['TOP','MID'],t:'Poke / burst hybride',s:['Niveau 3','1er objet','2 objets'],
+c:'Canon : E (porte) → Q (accéléré) = poke longue portée. Marteau : Q (saut) → W (AA renforcées) → E (knock-back) → R canon → Q. Combo full : Canon Q+E → R marteau → Q → W → E.',
+b:'Eclipse ou Muramana (Tear) → Serylda / Black Cleaver → Death\'s Dance / Edge of Night · Ionian · Précision (PTA) ou Comète',
+p:'Lvl 1–5 : poke Q canon à travers la porte, tu gagnes tous les trades à distance. Ne laisse pas l\'ennemi te coller : E marteau. Mid game : poke avant les objectifs, side lane fort. Tu scales moins bien : snowball tôt.',
+m:[['Irelia','Elle dash sur toi via les sbires : farm, E marteau quand elle Q, ne push pas seul.'],['Malphite','Il tank ton poke : push et joue le map.'],['Zed','Il te tue post-6 : Death\'s Dance, E marteau quand il R.']],
+k:['Q canon à travers E (porte) = 40 % plus de vitesse et de dégâts.','Marteau W = 4 AA rapides ; passe en marteau pour les trades courts.'],
+v:'Bon contre les mêlées lentes et les tanks (poke) · Difficile contre les dashers et les assassins'},
+
+Jhin:{r:['ADC'],t:'ADC burst 4 balles',s:['Niveau 2','2 objets','3 objets'],
+c:'4e balle = crit + dégâts sur PV manquants. Q (rebondit, plus fort sur un sbire tué) → W (root si l\'ennemi est marqué par un allié ou par toi) → AA. E (pièges) dans les bushes. R : 4 tirs longue portée, garde-le pour finir.',
+b:'Collector ou Yun Tal → Infinity Edge → Rapid Firecannon / Lord Dominik · Berserker / Symbiotic · Fleet ou Précision',
+p:'Lvl 1–5 : garde ta 4e balle pour trade, Q sur un sbire bas pour rebondir sur l\'ennemi. Lvl 2 : AA → W root = engage support. Mid game : poke W + R sur les objectifs, tu es lent : joue derrière ton frontline.',
+m:[['Draven','Il gagne les échanges rapprochés : 4e balle + recule, ne trade pas sans root.'],['Lucian','Il all-in lvl 2 : W root quand il dash, garde E en piège.'],['Tristana','Elle saute sur toi : E piège sous toi, W root.']],
+k:['4e balle + Q sur un sbire tué = burst très fort lvl 1.','Ta vitesse augmente à la 4e balle : rentre / sors avec.'],
+v:'Bon contre les lanes lentes et les compos sans dash · Difficile contre les assassins et les dashers'},
+
+Jinx:{r:['ADC'],t:'Hyper-carry AS',s:['2 objets','3 objets','Late game'],
+c:'Q (lance-roquettes : portée + AoE, coûte du mana par tir) pour poke et teamfight, minigun (Q désactivé) pour DPS pur. W (zap, slow longue portée) → E (chompers, root) sur les dives. R global sur les fuyards. Passif : kill = vitesse (« Get Excited »).',
+b:'Kraken / Yun Tal → Infinity Edge → Runaan / Lord Dominik · Berserker · Tempo Létal ou Fleet',
+p:'Lvl 1–5 : poke W et roquettes sur l\'ennemi qui last-hit, farm avec minigun. Ne trade pas au contact. Mid game : roquettes = zone 2+ cibles. Late : tu gagnes chaque fight si tu vis 3 s : reste derrière ton frontline.',
+m:[['Draven','Il te tue lvl 1 : farm à portée max, W quand il approche.'],['Caitlyn','Poke : évite les pièges, roquettes pour farmer à distance.'],['Lucian','All-in lvl 2 : E sous toi quand il dash.']],
+k:['Roquettes sur une wave groupée = push instantané, minigun pour les tours.','R passe à travers la carte : tir sur le fuyard bas dès qu\'un allié ping.'],
+v:'Bonne contre les compos qui laissent scale · Difficile contre les assassins et les engages sur elle'},
+
+Kaisa:{r:['ADC'],t:'Hyper-carry hybride',s:['2 objets','Niveau 11','3 objets'],
+c:'Passif : 4 stacks de plasma = dégâts sur PV manquants. W (longue portée, 2 stacks) → AA → Q (missiles, fort sur cible isolée) → E (AS + invisible). R : dash sur une cible marquée (bouclier). Évolutions : Q (AD), W (AP), E (AS).',
+b:'Kraken / Statikk → Guinsoo → Nashor\'s Tooth / Infinity Edge · Berserker · Précision (PTA) ou Tempo Létal',
+p:'Lvl 1–5 : farm au Q, poke W quand l\'ennemi est marqué (plasma). Tu es faible early : ne trade pas au contact. À 2 objets : Q évolué = tu duel tout le monde. R = dash sur une cible marquée avec bouclier : entre après ton frontline, jamais en premier.',
+m:[['Draven','Il te bat lvl 1–5 : farm, W à distance, joue le lvl 6.'],['Caitlyn','Portée : évite les pièges, farm au Q.'],['Lucian','All-in lvl 2 : E pour t\'échapper (invisible), garde le support proche.']],
+k:['Q sur une cible isolée = tous les missiles sur elle : cherche le pick isolé.','R sur une cible marquée (W ou AA) : ne R pas en premier, attends que le fight commence.'],
+v:'Bonne contre les compos qui laissent scale · Difficile contre les lanes agressives early'},
+
+Kalista:{r:['ADC'],t:'ADC kite lances',s:['Niveau 2','2 objets','3 objets'],
+c:'AA → saut (passif) → AA → E (déchire les lances, dégâts selon stacks, reset sur kill). Q (lance, traverse au kill). W (sentinelles = vision). R : tire ton allié lié vers toi puis le projette (knock-up). Trade : 3 AA → E.',
+b:'Blade of the Ruined King → Runaan → Guinsoo / Infinity Edge · Berserker · Tempo Létal ou Précision',
+p:'Lie-toi au support (R passif). Lvl 1–5 : abuse le kite (AA + saut), trade 3–4 lances + E. Tu es forte lvl 2–6 avec un support engage (R = engage instantané). Late : tu tombes derrière les autres ADC, joue les objectifs tôt (E exécute dragon / Baron sous ton AD).',
+m:[['Caitlyn','Portée : ne l\'approche pas, farm, kite quand elle avance.'],['Draven','Il gagne les AA : ne trade pas sans support, saute loin.'],['Sivir','Elle push plus vite : farm, joue la sécurité.']],
+k:['E sur un sbire bas avec des lances = reset et exécute.','Ton saut de passif esquive beaucoup de sorts : AA vers l\'arrière pour sauter loin.'],
+v:'Bonne avec un support engage (Leona, Rell) · Difficile contre le poke à portée'},
+
+Karma:{r:['SUPPORT','MID','TOP'],t:'Enchanteresse poke',s:['Niveau 3','1er objet','2 objets'],
+c:'R + Q (Mantra Q : gros dégâts + slow + explosion) pour le poke. R + E : bouclier de zone + vitesse (engage / disengage). R + W : root long + soins. Trade : Q → AA → E (vitesse) pour sortir.',
+b:'Objet support → Shurelya / Moonstone → Redemption / Imperial Mandate. Mid : Luden\'s Echo → Cosmic Drive · Ionian / Mobility · Aery ou Comète',
+p:'Lane : poke R Q dès que l\'ennemi last-hit, E sur l\'ADC pour les trades. Tu gagnes la lane lvl 1–5. Mid game : R E pour engager en groupe, R W sur un pick. Passif : les AA réduisent le CD de R.',
+m:[['Blitzcrank','Reste derrière les sbires, E pour fuir un grab.'],['Leona','Elle t\'engage : R W root sur elle quand elle Q, E pour sortir.'],['Nautilus','Même chose : E vitesse, ne trade pas au contact.']],
+k:['R Q à travers la wave = poke gratuit à 950 unités.','R E sur toute l\'équipe avant un engage = bouclier + vitesse de groupe.'],
+v:'Bonne contre les lanes passives et les compos lentes · Difficile contre les engages sur elle'},
+
+Karthus:{r:['JUNGLE','MID'],t:'Mage DPS global',s:['Niveau 6','1er objet','2 objets'],
+c:'Q spam (dégâts doublés sur cible isolée) → W (mur, slow + réduction RM) → E (aura, activée en combat). R global : dégâts sur tous les ennemis, à lancer quand tes laners fight. Passif : tu continues à lancer des sorts 7 s après ta mort.',
+b:'Liandry ou Blackfire Torch → Rylai / Rabadon → Zhonya · Bottes du sorcier / Ionian · Dark Harvest ou Comète',
+p:'Jungle : full clear (Q sur les camps, E aura), rarement de gank pré-6. Post-6 : R sur chaque fight bas de la carte. Tu farms et tu R : le kill count monte. Mid game : rejoins les fights, W pour piéger, meurs dans le fight = 7 s de dégâts passifs.',
+m:[['Khazix','Il te tue en isolement : ward, ne farm pas bas.'],['Nunu','Il te vole tout : commence côté opposé.'],['LeeSin','Invade : reste près de tes laners early.']],
+k:['R = ping les lanes avant de le lancer : un R au bon moment = 2 kills sans bouger.','Q sur une cible seule = double dégâts : isole-la du groupe.'],
+v:'Bon contre les compos qui fight beaucoup · Difficile contre les assassins et l\'invade'},
+
+Kassadin:{r:['MID'],t:'Assassin scaling AP',s:['Niveau 6','Niveau 11','Niveau 16'],
+c:'R (blink, stacks) → Q (bouclier magique + silence) → E (cône slow, rechargé par les sorts) → W (AA renforcée, mana). Post-16 : R toutes les 1,2 s. Combo : R → Q → E → W → R.',
+b:'Rod of Ages → Seraph / Archangel → Rabadon / Zhonya · Bottes du sorcier / Mercury · Fleet ou Conquérant',
+p:'Lvl 1–5 : farm sous la tour, Q pour last-hit à distance, tu es le plus faible du jeu. Ne meurs pas. Lvl 6 : commence à roam avec R. Lvl 11 : all-in les cibles isolées. Lvl 16 : tu es le meilleur champion du jeu. Ton passif réduit les dégâts magiques.',
+m:[['Sylas','Il vole ton R et te bat pré-16 : farm, garde W pour le mana.'],['Talon','Il te tue pré-6 : reste sous tour, Q en réponse à son W.'],['Zed','AD : ton passif ne sert pas. Zhonya, farm, joue 16.']],
+k:['Q bloque les projectiles pendant le bouclier (Ahri E, Lux Q).','R stack jusqu\'à 4 : chaque R coûte plus de mana, gère Seraph.'],
+v:'Bon contre les mages AP · Difficile contre les assassins AD et les compos qui le tuent pré-11'},
+
+Katarina:{r:['MID'],t:'Assassine reset',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (dague rebondit, laisse une dague au sol) → E (dash vers la dague = dégâts + reset) → W (dague au sol) → AA. Ramasser une dague = dégâts de zone. R (canalisée) : dégâts massifs, lance-la après les CC adverses. Reset sur kill/assist.',
+b:'Hextech Gunblade ou Nashor\'s Tooth → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Conquérant ou Électrocution',
+p:'Lvl 1–5 : farm, trade Q → E dague → sors avec E sur une autre dague. Post-6 : all-in quand l\'ennemi a utilisé son CC. Roam bot avec R up. En teamfight, entre après le CC adverse, chaque kill reset tout.',
+m:[['Galio','Il te taunt dans ta R : farm, joue les roams.'],['Diana','Elle te burst : trade court, ne R pas près d\'elle.'],['Lissandra','Elle te CC avant ta R : E après son W.']],
+k:['Chaque dague ramassée = un petit combo gratuit : positionne les dagues pour enchaîner.','R se coupe par un CC : lance-la après le stun adverse, pas avant.'],
+v:'Bonne contre les mages sans CC · Difficile contre les tanks CC et les compos avec silence / stun instantané'},
+
+Kayle:{r:['TOP','MID'],t:'Hyper-scaling AS',s:['Niveau 6','Niveau 11','Niveau 16'],
+c:'E (AA renforcée à distance, dégâts % PV manquants) → Q (slow, réduit armure/RM) → AA (passif : AS et vagues). W (vitesse + soins). R : invulnérabilité sur un allié ou toi (2,5 s). Lvl 16 : tout à distance.',
+b:'Nashor\'s Tooth → Guinsoo / Riftmaker → Rabadon / Berserker · Berserker · Précision (PTA) ou Fleet',
+p:'Lvl 1–5 : farm sous la tour, Q pour last-hit à distance. Lvl 6 : portée E, tu commences à trade. Lvl 11 : tu deviens forte. Lvl 16 : injouable. Ton job : ne pas mourir jusque-là, TP pour les fights avec R sur ton carry.',
+m:[['Renekton','Il te tue pré-6 : farm au Q, tour, W pour fuir.'],['Darius','Idem : ne trade jamais, farm.'],['Irelia','Elle te dash : reste sous tour, Q quand elle Q.']],
+k:['R sur un allié en dive = 2,5 s d\'invulnérabilité, peut sauver un Baron.','Lvl 11 : tes AA lancent des ondes qui touchent plusieurs cibles — farme et poke sans t\'exposer.'],
+v:'Bonne contre les compos lentes en late · Difficile contre les lanes agressives early'},
+
+Kayn:{r:['JUNGLE'],t:'Assassin / bruiser (2 formes)',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (dash + dégâts) → W (slash, slow) → E (traverse les murs, soins). Rhaast (rouge) : dégâts % PV, soins, W knock-up. Ombre (bleu) : dégâts sur PV manquants, E plus long, R exécute. R : entre dans la cible (invulnérable) puis sors avec dégâts.',
+b:'Rhaast : Eclipse → Black Cleaver → Sterak. Ombre : Youmuu / Opportunity → Edge of Night → Serylda · Bottes plaquées / Ionian · Conquérant (Rhaast) ou Électrocution (Ombre)',
+p:'Full clear puis choisis ta forme selon le dégât reçu (mêlées = Rhaast, à distance = Ombre). Gank via les murs (E). Rhaast : engage frontline, R sur le tank pour survivre. Ombre : pick les carries isolés, R sur le carry pour l\'exécuter.',
+m:[['Nunu','Il te chasse en early : joue le mur de ta jungle, farm.'],['Kindred','Elle te kite : gank et objectifs.'],['Rammus','Rhaast tient, Ombre non : choisis Rhaast.']],
+k:['E à travers un mur = gank d\'un angle impossible.','R rend invulnérable pendant la durée : esquive un R Karthus / Zed.'],
+v:'Rhaast bon contre les mêlées / tanks · Ombre bon contre les compos à 3 carries · Difficile contre les tanks CC en Ombre'},
+
+Kennen:{r:['TOP','MID'],t:'Mage AoE stun',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : 3 marques = stun. Q (shuriken, marque) → AA (marque) → W (marque active). E (dash, vitesse, marque au passage). R : tempête AoE, marque à chaque tick. Combo teamfight : Flash + R → E → W = stun de zone.',
+b:'Hextech Rocketbelt ou Liandry → Zhonya → Rabadon / Shadowflame · Bottes du sorcier · Électrocution ou Comète',
+p:'Lvl 1–5 : poke Q + AA à distance, tu kite les mêlées. Push et prends les plaques. Post-6 : R + Flash = engage de teamfight, ou W stun de lane. TP sur les fights bot : Kennen R sur 3 = fight gagné.',
+m:[['Irelia','Elle dash sur toi : E de fuite, ne reste pas près des sbires bas.'],['Renekton','Il te dash : Q + AA à portée max, E de fuite.'],['Yasuo','Le mur bloque Q : trade quand W est en CD, E pour sortir.']],
+k:['E en fuite = ta vitesse ; ne l\'utilise pas pour engager sans R.','Marques : compte-les. Q (1) + AA (2) + W actif (3) = stun.'],
+v:'Bon contre les mêlées lentes et les compos groupées · Difficile contre les dashers et l\'anti-tempête (Zhonya, Cleanse)'},
+
+Khazix:{r:['JUNGLE'],t:'Assassin isolement',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (isolé = 150 % dégâts) → AA → W (épines, soins, slow) → E (saut, reset sur kill). R : invisible 1,25 s (2–3 charges), réinitialise le passif. Évolutions : Q (portée + isolé), E (reset), R (invisible plus long), W (3 épines).',
+b:'Youmuu ou Eclipse → Edge of Night / Opportunity → Serylda / Black Cleaver · Bottes plaquées / Ionian · Électrocution ou First Strike',
+p:'Full clear, gank lvl 3 via E sur les ennemis isolés. Tu chasses les cibles seules (jungler, support qui ward). Évolue Q en premier pour les duels, E pour les teamfights (reset). Post-6 : R pour entrer / sortir invisible.',
+m:[['Rammus','Il te contre : ne fight pas, prends ses camps quand il gank.'],['LeeSin','Duel dur early : évite, gank plus vite.'],['Warwick','Il te sent : joue les pick loin de lui.']],
+k:['Isolement = aucun ennemi/sbire à 425 unités : attends que la cible s\'éloigne.','Passif (hors vision) : AA renforcée + slow : entre par un bush.'],
+v:'Bon contre les carries isolés et les jungler faibles · Difficile contre les tanks et les compos groupées'},
+
+Kindred:{r:['JUNGLE'],t:'Marksman jungler scaling',s:['1er objet','2 objets','3 objets'],
+c:'Q (dash 3 flèches, reset dans W) → W (zone : Wolf attaque, soins) → AA → E (3 AA = dégâts % PV, exécute). R : zone d\'invulnérabilité (soins à la fin) sur les alliés ET les ennemis. Marques (passif) : chasse les camps / champions marqués.',
+b:'Kraken Slayer → Blade of the Ruined King → Guinsoo / Infinity Edge · Berserker · Précision (PTA) ou Tempo Létal',
+p:'Full clear, chasse les marques (ennemis marqués = dégâts % PV bonus). Kite tout le monde avec Q, ne fight pas au contact. Objectifs : forte avec smite + E. R : lance-le quand ton allié va mourir, pas trop tôt (les ennemis en profitent).',
+m:[['LeeSin','Il te tue tôt : ward, farm loin.'],['Elise','Gank plus vite : joue tes marques et tes objectifs.'],['Nunu','Il te vole tout : commence côté opposé.']],
+k:['Marques sur les ennemis : le bonus reste toute la game — collecte-les.','R sauve aussi les ennemis : place-le pour que ton équipe en profite plus.'],
+v:'Bonne contre les jungler lents et les compos sans dive · Difficile contre les invades early'},
+
+Kled:{r:['TOP'],t:'Bruiser engage',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Sur Skaarl : Q (piège, tire l\'ennemi) → E (dash, recast pour revenir) → AA (W : 4 coups rapides, % PV). Démonté : Q (fusil, recul), courage pour remonter. R : charge globale-ish, bouclier + knock. Combo : E → Q → W AA → R.',
+b:'Sundered Sky ou Black Cleaver → Sterak → Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 1–3 : all-in Q + E + W dès que l\'ennemi est à portée : tu es le plus fort du jeu. Démonté = recule, tire au Q. Post-6 : R vers les fights bot/dragon (donne de la vitesse à l\'équipe). Side lane : push et R sur les objectifs.',
+m:[['Fiora','Elle pare ton W : trade Q → E, ne fais pas W sous sa parade.'],['Vayne','Kite : ne la chasse pas démonté, Q pour la tirer.'],['Malphite','Il tank : farm, joue le map avec R.']],
+k:['Démonté : Q fusil te fait reculer, recharge le courage sur les sbires et remonte pour finir le trade.','R touche plusieurs ennemis = bouclier plus gros.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le kite et les parades'},
+
+KogMaw:{r:['ADC'],t:'Hyper-carry AS % PV',s:['2 objets','3 objets','Late game'],
+c:'W (portée + dégâts % PV magiques) → AA spam. Q (réduit armure/RM, poke) → E (slow). R : artillerie longue portée, plus forte sur cible basse. Passif : à ta mort, tu explosés en 4 s. Poke lane : R sur l\'ennemi bas.',
+b:'Guinsoo → Blade of the Ruined King → Runaan / Wit\'s End · Berserker · Tempo Létal',
+p:'Lvl 1–5 : farm, poke R quand l\'ennemi est bas. Tu es faible : ne trade pas au contact. À 2 objets : W actif = tu fonds tout le monde, joue derrière le support (Lulu, Milio, Braum). Late : reste immobile et tire, ton équipe protège.',
+m:[['Draven','Il te tue early : farm, ne trade pas, garde le support.'],['Caitlyn','Portée : évite les pièges, R sur elle quand elle est basse.'],['Lucian','All-in lvl 2 : E slow, recule.']],
+k:['W actif : +130 de portée — tu tapes de derrière les tanks.','R longue portée sur les fuyards bas = kills gratuits.'],
+v:'Bon contre les tanks et les compos qui laissent scale · Difficile contre les assassins et les engages'},
+
+KSante:{r:['TOP'],t:'Tank / duelist (All Out)',s:['Niveau 3','2 objets','Niveau 11'],
+c:'Q (stacks, 3e Q = projection) → W (charge, invulnérabilité aux CC, projette) → E (dash, vers un allié = plus loin) → R : projette l\'ennemi derrière un mur puis All Out (dégâts, soins, moins de résistances). Combo : Q → Q → E → Q3 → R.',
+b:'Iceborn Gauntlet ou Sundered Sky → Jak\'Sho / Kaenic → Sterak / Thornmail · Bottes plaquées · Grasp',
+p:'Lvl 1–5 : trade Q + AA, tu tank et tu farm. Post-6 : R sur le carry adverse en side = il finit seul contre toi All Out. En teamfight, R le carry vers ton équipe. Rappel : All Out réduit tes résistances : utilise-le contre un carry isolé.',
+m:[['Fiora','Elle t\'exécute : ne 1v1 pas hors All Out, farm.'],['Camille','Elle te split : joue le map, TP.'],['Vayne','% PV : joue le team, R sur elle quand isolée.']],
+k:['W charge rend immunisé aux CC pendant la canalisation.','E vers un allié traverse presque tous les murs.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le % PV et les duelists'},
+
+Leblanc:{r:['MID'],t:'Assassine burst',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (marque) → W (dash, explose la marque) → R Q ou R W (copie) → E (chaînes, root après 1,5 s) → retour W (revenir). Combo full : W → Q → R Q → E → W retour. Trade : Q → W → retour instantané.',
+b:'Luden\'s Echo → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Électrocution ou First Strike',
+p:'Lvl 1–5 : trade Q → W et reviens, tu gagnes chaque échange. Roam bot dès lvl 3 (W = distance énorme). Post-6 : R Q = burst, R E = double chaîne pour un root de gank. Ton passif crée un clone à moins de 40 % PV.',
+m:[['Galio','Il annule ton burst avec W : farm, roam.'],['Kassadin','Il scale : tue-le pré-11 avec des trades Q W.'],['Malzahar','Bouclier passif : Q pour le casser, roam, ne le fight pas post-6.']],
+k:['W retour est un escape : ne le gaspille pas, garde 4 s de marge.','E root = 1,5 s après : lance E puis W pour être sûr d\'être à portée.'],
+v:'Bonne contre les mages immobiles et les carries · Difficile contre les tanks CC et les boucliers'},
+
+LeeSin:{r:['JUNGLE'],t:'Duelist mobile',s:['Niveau 3','1er objet','2 objets'],
+c:'Q1 (onde) → Q2 (dash, dégâts sur PV manquants) → E (slow) → AA (passif). Insec : W sur une ward derrière la cible → R vers ton équipe. Combo gank : Q → Q → E → AA → R. Ward jump = escape.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 2–3 : invade ou gank (tu es le plus fort). Full clear puis gank les lanes avancées. Objectifs tôt (grubs 8:00). Tu baisses après 20 min : snowball, force les picks et les insec en teamfight.',
+m:[['Nunu','Il te vole : commence côté opposé.'],['Rammus','Il te contre : joue ganks et objectifs.'],['Lillia','Elle scale : gank tôt, prends ses camps.']],
+k:['Q2 dégâts selon PV manquants : dash après ton E, pas avant.','W sur un allié ou une ward = mobilité infinie, achète des wards.'],
+v:'Bon contre les jungler lents et les carries · Difficile contre les tanks armure et le late game'},
+
+Leona:{r:['SUPPORT'],t:'Tank engage',s:['Niveau 2','Niveau 6','1er objet'],
+c:'E (lance, stun à la fin) → Q (AA renforcée, stun) → W (armure) → R (stun de zone, centre = stun long). Combo lvl 2 : E → Q. Flash + Q sur un ADC qui push trop. Passif : tes sorts marquent, tes alliés explosent la marque.',
+b:'Objet support → Locket → Knight\'s Vow / Thornmail · Bottes plaquées / Mercury · Aftershock',
+p:'Lvl 2 : engage E Q dès que ton ADC peut suivre. Chaque engage = ton ADC doit AA (marques). Ward rivière 2:40 puis engage. Mid game : R sur le carry adverse, W avant d\'entrer, tu tank tout.',
+m:[['Morgana','Son bouclier noir annule tout : engage sur elle quand elle l\'a mis sur l\'ADC, ou après.'],['Janna','Q la tornade annule ton E : engage quand sa Q est en CD.'],['Lulu','Polymorph pendant E : attends sa W.']],
+k:['R centre = stun 1,5 s, bord = slow : vise le centre sur le carry.','W avant d\'engager, jamais après.'],
+v:'Bonne contre les ADC immobiles · Difficile contre les enchanteurs disengage'},
+
+Lillia:{r:['JUNGLE','TOP'],t:'Mage mobile AS-scaling',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (cercle : bord = vrais dégâts, stacks de vitesse) → W (charge, centre = gros dégâts) → E (graine, roule, slow). R : endort tous les ennemis touchés par le passif. Combo gank : E → Q → W → R sur 2+ endormis.',
+b:'Liandry ou Riftmaker → Rylai / Blackfire Torch → Rabadon / Zhonya · Ionian / sorcier · Conquérant ou Phase Rush',
+p:'Full clear rapide (Q AoE, vitesse). Gank lvl 4–6 les lanes où l\'ennemi est avancé (tu poursuis grâce à la vitesse). Post-6 : R sur 2+ cibles = fight gagné pour tes laners. Objectifs : tu kite le jungler adverse.',
+m:[['Warwick','Il te sent basse : ne gank pas à 50 %.'],['Nunu','Il te vole les camps : commence côté opposé.'],['Rammus','Il te rattrape : joue à distance et les objectifs.']],
+k:['Bord du Q = vrais dégâts : place-toi pour toucher au bord.','R endort ceux marqués par le passif : Q ou E d\'abord, R ensuite.'],
+v:'Bonne contre les compos groupées et les jungler lents · Difficile contre les invades early et les Cleanse'},
+
+Lissandra:{r:['MID'],t:'Mage contrôle engage',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (slow, passe à travers la 1re cible) → E (griffe : recast pour dash) → W (root de zone) → R : sur ennemi = stun, sur toi = stase (soins). Combo : E → recast → W → Q → R. Flash + R sur le carry.',
+b:'Rod of Ages ou Liandry → Zhonya → Rabadon / Rylai · Bottes du sorcier · Électrocution ou Aery',
+p:'Lvl 1–5 : farm au Q, poke, tu es safe. Post-6 : engage E → R sur le carry, ou contre-engage : R sur toi pour survivre. Roam bot avec E + R = kill. Tu gagnes les fights : W sur 2+ cibles.',
+m:[['Zed','R sur toi quand il R (stase), Zhonya ensuite.'],['Talon','Roam : ping, ward, W quand il saute.'],['Fizz','Il esquive tout avec E : W après son saut.']],
+k:['R sur toi = stase + soins : esquive n\'importe quel burst.','E recast peut être fait à la fin du trajet : traverse les murs.'],
+v:'Bonne contre les assassins et les dashers · Difficile contre le poke longue portée'},
+
+Locke:{r:['MID'],t:'Assassin AP / mixte (2026)',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (clous, stacks) → E (blink puis AA-dash qui consomme les stacks) → AA (passif : bonus selon PV manquants) → W (vitesse + AS, stocke des PV gris, recast = soins). R : totem qui exécute sous un seuil de PV, les âmes réduisent le CD.',
+b:'À vérifier sur u.gg selon le patch (nouveau champion) : Lich Bane / Nashor → Shadowflame → Rabadon ou Zhonya · Bottes du sorcier · Électrocution ou Conquérant',
+p:'Lvl 1–5 : stack Q puis E pour exploser les stacks en trade court, W pour tanker la riposte et te soigner. Post-6 : R = exécution de zone, place le totem là où l\'ennemi va fuir. Chaque kill reset E : entre par le carry, ressors sur le reset.',
+m:[['Galio','Sa W annule ton burst : trade quand elle est en CD.'],['Malzahar','Bouclier passif : Q pour le casser, roam.'],['Lissandra','Elle te CC après ton E : attends son W.']],
+k:['E reset sur kill : en teamfight, enchaîne les cibles basses.','W recast = soins des PV gris : lance-le après avoir pris le burst.'],
+v:'Bon contre les mages immobiles · Difficile contre les tanks CC et les boucliers de sorts'},
+
+Lucian:{r:['ADC','MID'],t:'ADC lane bully',s:['Niveau 2','1er objet','2 objets'],
+c:'Chaque sort = passif 2 AA. Trade : Q → AA AA → W → AA AA → E (dash) → AA AA. R (rafale) en ligne, cancel pour bouger. Combo lvl 2 : E → AA AA → Q → AA AA.',
+b:'Kraken / Yun Tal → Infinity Edge / Navori → Lord Dominik / Bloodthirster · Berserker · Précision (PTA) ou Fleet',
+p:'Lvl 1–2 : tu gagnes tous les trades : Q sur l\'ennemi via un sbire, AA AA. Lvl 2 avant l\'ennemi = all-in E. Support engage = kills. Mid game : tu baisses en late : ferme la game avant 30 min, prends les plaques.',
+m:[['Caitlyn','Portée : engage seulement lvl 2 avec support, évite les pièges.'],['Ashe','Elle te ralentit : trade court, E en arrière.'],['Ezreal','Il poke : push, il ne peut pas te fight de près.']],
+k:['E pendant R = tu déplaces la rafale.','Q à travers un sbire pour toucher l\'ennemi derrière.'],
+v:'Bon contre les ADC scaling et les supports enchanteurs · Difficile contre le kite et les compos qui scale mieux'},
+
+Lulu:{r:['SUPPORT'],t:'Enchanteresse protection',s:['Niveau 3','1er objet','2 objets'],
+c:'W sur l\'ennemi = polymorph (stop tout), W sur allié = AS + vitesse. E : bouclier sur allié ou dégâts + marque sur ennemi → Q (double slow via Pix). R : knock-up + PV bonus. Peel : W sur l\'assassin → E → R sur le carry.',
+b:'Objet support → Ardent Censer / Moonstone → Redemption / Shurelya · Ionian · Aery ou Guardian',
+p:'Lane : poke Q + AA (Pix double), E bouclier sur l\'ADC qui trade. Ne gaspille pas W. Mid game : reste sur le hyper-carry, W polymorph sur le dive, R quand 2 ennemis sautent sur ton carry.',
+m:[['Leona','Polymorph pendant son E : W dès qu\'elle avance.'],['Blitzcrank','Reste derrière les sbires, E bouclier sur l\'ADC grabé.'],['Zyra','Poke : reste hors de portée, E sur l\'ADC.']],
+k:['W polymorph = 1,5 s sans sort ni AA : bloque Yi, Tryndamere, Kayn.','R interrompt les dashes en cours (knock-up).'],
+v:'Bonne avec un hyper-carry AS · Difficile contre le poke longue portée'},
+
+Lux:{r:['MID','SUPPORT'],t:'Mage burst / poke',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (root 2 cibles) → E (zone slow, recast = explosion) → AA (passif) → R (laser). Combo full : Q → E → R → E recast → AA. Poke : E → AA. W (bouclier double) pour les alliés.',
+b:'Luden\'s Echo → Shadowflame / Horizon Focus → Rabadon · Bottes du sorcier · Aery (support) ou Électrocution / Comète (mid)',
+p:'Lane : poke E + AA passif, Q quand l\'ennemi est dans les sbires (root). Post-6 : Q → R = kill à distance. Roam avec R up. Support : Q → E → R sur l\'ADC adverse qui avance. Tu es immobile : garde le Flash.',
+m:[['Zed','Zhonya rush, Q quand il apparaît derrière toi (R).'],['Fizz','E de Fizz esquive Q : lance Q après son saut.'],['Yasuo','Mur bloque tout : Q quand W est en CD, garde E pour le slow.']],
+k:['Passif après chaque sort : AA = dégâts bonus gratuits.','R a une courte préparation : lance-le sur une cible rootée.'],
+v:'Bonne contre les mêlées lentes et les mages immobiles · Difficile contre les assassins et les dashers'},
+
+Malphite:{r:['TOP','SUPPORT','MID'],t:'Tank anti-AD engage',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (slow + vitesse volée) → E (réduit l\'AS de zone) → W (AA renforcées, armure). R : knock-up de zone, Flash + R sur 3+. Trade top : Q → recule. En AD lane : E réduit ses trades.',
+b:'Sunfire / Iceborn → Thornmail → Frozen Heart / Randuin (AP burst : Rocketbelt → Rabadon) · Bottes plaquées · Grasp ou Comète (poke)',
+p:'Lvl 1–5 : farm, Q poke quand l\'ennemi last-hit, tank. Post-6 : R Flash sur le carry adverse = fight gagné. TP sur bot dès 6 pour R le duo. Tu es fort contre les AD : Thornmail, tu gagnes les fights à 5.',
+m:[['Vayne','% PV : joue les fights à 5, ne la chasse pas.'],['Mordekaiser','AP : il te tue en 1v1, farm et joue le map.'],['Gwen','AP + % PV : idem, farm.']],
+k:['R via Flash : Flash dans les 3 cibles puis R immédiatement.','E réduit l\'AS de toute la zone : lance-le sur l\'ADC en teamfight.'],
+v:'Bon contre les AD et les compos AA · Difficile contre les AP et le % PV'},
+
+Malzahar:{r:['MID'],t:'Mage contrôle / DPS',s:['Niveau 6','1er objet','2 objets'],
+c:'E (maladie, se propage sur kill) → Q (silence) → W (voidlings) → R (suppression, canal). Combo full : E → Q → W → R (+ Ignite). Passif : bouclier de sort quand hors combat. Farm : E sur un sbire bas, propage.',
+b:'Liandry → Rylai / Malignance → Rabadon / Zhonya · Bottes du sorcier · Aery ou Comète',
+p:'Lvl 1–5 : farm au E (propagation = push gratuit), poke Q. Tu es safe grâce au passif. Post-6 : R sur la cible isolée avec le jungler = kill. Push et roam avec E, R comme peel (suppress l\'assassin qui dive).',
+m:[['Yasuo','Le mur bloque Q : E + W, ne R pas sans son W en CD.'],['Kassadin','Il te bat post-11 : push et roam, tue-le tôt.'],['Zed','Zhonya. R sur lui quand il sort de R : il est suppress = mort.']],
+k:['R peut être coupé par un CC : lance-le quand l\'ennemi n\'a plus de sorts.','Passif : ne prends pas de dégât pendant 12 s pour le recharger.'],
+v:'Bon contre les assassins (passif + R) · Difficile contre les tanks et le poke'},
+
+Maokai:{r:['SUPPORT','JUNGLE','TOP'],t:'Tank engage CC',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (knock-back, slow) → W (root, dash intouchable) → E (rejeton : vision + slow, plus fort dans un bush). R : racines qui root tout le monde en ligne. Combo engage : W → Q → R. Passif : soins toutes les x sorts.',
+b:'Objet support → Locket → Knight\'s Vow / Thornmail (jungle : Sunfire → Jak\'Sho) · Mercury / plaquées · Aftershock ou Guardian',
+p:'Support : E dans les bushes pour la vision, W sur l\'ADC adverse lvl 2 avec ton ADC. Mid game : R en ligne sur le backline, Q pour séparer. Jungle : clear avec E + Q, gank W → Q.',
+m:[['Morgana','Bouclier noir annule W : engage après ou sur elle.'],['Janna','Elle annule ton engage : W quand sa Q est en CD.'],['Lulu','Polymorph pendant W : attends sa W.']],
+k:['E dans un bush = piège qui slow et révèle : vision gratuite.','R traverse les sbires : lance-le sur le carry derrière la wave.'],
+v:'Bon contre les ADC immobiles et les compos qui engagent · Difficile contre les enchanteurs disengage'},
+
+MasterYi:{r:['JUNGLE'],t:'Duelist AS scaling',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (intouchable, saute sur 4 cibles) → AA → E (vrais dégâts) → R (vitesse, immunité aux slows, reset sur kill). Passif : double AA. Gank : R → Q sur la cible qui fuit → E AA. Fuis les CC : Q pour esquiver un R (Malphite, Annie).',
+b:'Kraken Slayer → Blade of the Ruined King → Wit\'s End / Guinsoo · Berserker · Tempo Létal',
+p:'Full clear (W = soins entre les camps), aucun gank avant 6 sauf lane très avancée. Post-6 : gank les lanes sans CC. Objectifs : tu les fais vite. Teamfight : entre après le CC adverse, chaque kill = reset R et Q.',
+m:[['Rammus','Il te tue quand tu AA : joue les objectifs, jamais de duel.'],['Lillia','Elle te kite avec le sommeil : gank et farm.'],['Jax','Contre-frappe : n\'AA pas sous E.']],
+k:['Q esquive un sort ciblé et un CC : compte les sorts adverses avant d\'entrer.','W régénère et réduit les dégâts : à utiliser dans le fight quand tu es sous 40 %.'],
+v:'Bon contre les compos sans CC · Difficile contre les tanks armure et les CC en chaîne'},
+
+Mel:{r:['MID','SUPPORT'],t:'Mage poke / anti-projectiles',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : chaque sort empile des projectiles bonus sur tes AA. Q (salve de zone) → AA → E (zone, root au bord) → W (renvoie les projectiles, vitesse) → R (exécute selon les stacks d\'Overwhelm). Combo : E root → Q → AA → R.',
+b:'Luden\'s Echo → Shadowflame / Horizon Focus → Rabadon / Zhonya · Bottes du sorcier · Comète ou Aery',
+p:'Lane : poke Q + AA passif à distance, E sur les dashers. W = ton anti-Zed / anti-Lux : renvoie leurs sorts. Post-6 : R exécute une cible marquée (stacks visibles). Joue à portée max, tu es fragile.',
+m:[['Fizz','Il esquive tout : E après son saut, W ne renvoie pas les mêlées.'],['Talon','Roam : ping, ward, E quand il saute.'],['Kassadin','Il scale : tue-le pré-11 avec des R.']],
+k:['W renvoie même un R Ezreal ou un Q Lux : temps-le sur le projectile clé.','R sur une cible avec beaucoup de stacks = exécution à longue portée.'],
+v:'Bonne contre les mages à projectiles · Difficile contre les assassins mêlée'},
+
+Milio:{r:['SUPPORT'],t:'Enchanteur protection / poke',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (kick : knock-back + dégâts, rebondit) → W (zone de soins + portée, suit un allié) → E (bouclier + vitesse, 2 charges). R : soins + retire les CC de tous les alliés. Passif : AA/sorts alliés brûlent. Peel : Q sur le dive → E → R.',
+b:'Objet support → Ardent Censer / Moonstone → Redemption / Shurelya · Ionian · Aery ou Guardian',
+p:'Lane : Q poke sur l\'ennemi qui approche, E sur l\'ADC qui trade (portée). Ne trade pas au contact. Mid game : W sur le carry en fight = portée bonus, R quand ton équipe est CC (Malphite R, Amumu R).',
+m:[['Leona','Q sur elle quand elle E : knock-back annule sa Q.'],['Blitzcrank','Reste derrière les sbires, E sur l\'ADC grabé.'],['Pyke','Q quand il E, R pour retirer le stun.']],
+k:['Q rebondit sur la 1re cible pour toucher la 2e : vise le support pour toucher l\'ADC.','R retire les CC : anti-Malzahar, anti-Ashe R.'],
+v:'Bon avec un hyper-carry · Difficile contre le poke longue portée'},
+
+MissFortune:{r:['ADC'],t:'ADC burst AoE',s:['Niveau 6','2 objets','3 objets'],
+c:'Q (double tir : rebondit sur la 2e cible, crit si la 1re meurt) → AA (passif : dégâts bonus sur nouvelle cible) → E (pluie, slow) → R (canal, dégâts massifs en cône). Poke : Q sur un sbire bas devant l\'ennemi.',
+b:'Collector / Yun Tal → Infinity Edge → Lord Dominik / Bloodthirster · Berserker / Symbiotic · Précision (PTA) ou Fleet',
+p:'Lvl 1–5 : poke Q via les sbires, alterne les AA entre cibles (passif). Post-6 : R après un CC allié (Leona, Nautilus) = fight gagné. Mid game : E + R sur les objectifs pour zoner, garde ta vitesse passive pour bouger.',
+m:[['Caitlyn','Portée : évite les pièges, Q via sbire pour la toucher.'],['Draven','Il gagne les AA : poke Q, jamais de trade AA.'],['Kaisa','Elle scale : abuse lvl 6, ferme la game.']],
+k:['Q sur un sbire à 1 PV = crit garanti sur l\'ennemi derrière.','R se coupe par n\'importe quel CC : lance-le derrière ton frontline.'],
+v:'Bonne contre les compos groupées et les lanes lentes · Difficile contre les dashers et les compos disengage'},
+
+MonkeyKing:{r:['JUNGLE','TOP'],t:'Bruiser engage',s:['Niveau 6','1er objet','2 objets'],
+c:'E (dash sur cible, AS) → Q (portée AA, réduction d\'armure) → AA → W (clone invisible, esquive). R (cyclone, knock-up, 2 charges). Combo : E → Q → AA → R → W pour sortir. Passif : armure + PV selon les ennemis proches.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Jungle : clear ok, gank lvl 3 avec E + Q, W pour dive et sortir. Post-6 : R double knock-up en teamfight, Flash + R sur 3. Top : trade E → Q → AA → W retour, all-in lvl 6.',
+m:[['Rammus','Il te contre : joue les objectifs.'],['Kindred','Kite : gank et farm.'],['Fiora','Top : elle pare ton E : trade quand W est en CD.']],
+k:['W = invisible + clone : les ennemis frappent le clone. Utilise-le en ligne droite.','R a 2 charges : le 1er pour le knock-up, le 2e pour poursuivre.'],
+v:'Bon contre les compos groupées · Difficile contre les tanks armure et les CC'},
+
+Mordekaiser:{r:['TOP','JUNGLE'],t:'Juggernaut AP',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Passif : 3 coups = aura de dégâts. Q (coup massif, plus fort sur cible isolée) → E (attire, pénétration magique) → AA passif → W (bouclier des dégâts, recast = soins). R : Royaume de la mort 7 s (vole 10 % de stats). Combo : E → Q → AA → W → R.',
+b:'Riftmaker → Liandry / Rylai → Rabadon / Zhonya · Bottes plaquées / Mercury · Conquérant',
+p:'Lvl 1–3 : trade E → Q → AA, ta W absorbe. Post-6 : R isole un carry = kill. Side lane : tu gagnes tous les 1v1 sans mobilité. Teamfight : R sur le carry adverse ou sur le tank pour retirer le frontline.',
+m:[['Vayne','Kite : ne la chasse pas, E pour la tirer, R si tu peux l\'atteindre.'],['Fiora','Elle t\'exécute en 1v1 : joue le map.'],['Kayle','Elle scale : tue-la pré-6, sinon R sur elle en fight.']],
+k:['R sur le tank ennemi = tu retires leur frontline pendant 7 s.','Q sur une cible seule (pas de sbires) = dégâts bonus.'],
+v:'Bon contre les mêlées lentes et les mages · Difficile contre le kite et l\'anti-soin'},
+
+Morgana:{r:['SUPPORT','MID','JUNGLE'],t:'Mage contrôle / anti-CC',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (root long) → W (zone) → AA. E (bouclier noir : annule les CC) sur toi ou l\'allié. R : slow + stun après 3 s sur les ennemis proches (Zhonya pour rester). Combo engage : Flash + R → Q → W.',
+b:'Objet support → Zhonya → Redemption / Locket (mid : Liandry → Zhonya → Rabadon) · Ionian / sorcier · Aery ou Comète',
+p:'Support : Q sur l\'ennemi qui avance, E sur l\'ADC quand l\'engage arrive (Leona, Blitz, Nautilus). Mid : farm au W, poke Q. Post-6 : Flash + R en teamfight, Zhonya pendant R = stun garanti.',
+m:[['Pyke','Il te grab : reste derrière, E sur l\'allié.'],['Braum','Bouclier bloque Q : Q par le côté.'],['Zyra','Poke : reste hors portée, E sur l\'ADC.']],
+k:['E = bouclier magique + immunité CC : sur le carry avant Malzahar R, Ashe R.','R + Zhonya = les ennemis restent et se font stun.'],
+v:'Bonne contre les engages CC · Difficile contre les compos sans CC et le poke AD'},
+});
+
+/* fiches N → S */
+Object.assign(FICHES_DEFAULT, {
+Naafiri:{r:['MID','JUNGLE'],t:'Assassine meute',s:['Niveau 3','1er objet','2 objets'],
+c:'Q1 → Q2 (saignement, 2e dague = dégâts bonus sur cible saignante) → W (dash de la meute sur la cible, intouchable) → E (dash + explosion) → AA. R : renforce la meute, vision, bouclier. Combo : Q Q → W → E → AA → R.',
+b:'Eclipse ou Youmuu → Edge of Night / Opportunity → Serylda / Black Cleaver · Ionian / plaquées · Électrocution ou Conquérant',
+p:'Lvl 1–5 : poke Q Q sur l\'ennemi qui last-hit (la meute suit les dagues). Trade lvl 3 W → E. Post-6 : R avant un roam (vision + vitesse). Tu es simple : pick les cibles isolées, ne saute pas dans 3 CC.',
+m:[['Galio','Il annule ton burst : farm, roam.'],['Malzahar','Bouclier passif : Q pour casser, R le suppress te tue.'],['Lissandra','CC en chaîne : W après son W.']],
+k:['W te rend intouchable pendant le dash : esquive un sort ciblé.','La meute prend les AA des tours : dive avec la meute devant.'],
+v:'Bonne contre les mages immobiles · Difficile contre les tanks CC'},
+
+Nami:{r:['SUPPORT'],t:'Enchanteresse poke / CC',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (bulle, stun de zone, 1 s de délai) → W (rebondit : soigne allié / blesse ennemi) → E (3 AA renforcées + slow sur l\'allié) → R (vague, knock-up). Combo engage : R → Q (la vague ralentit, Q devient facile) → E sur l\'ADC.',
+b:'Objet support → Moonstone / Ardent Censer → Redemption / Shurelya · Ionian · Aery ou Comète',
+p:'Lane : E sur l\'ADC qui trade (slow + dégâts), W pour soigner et blesser. Q sur l\'ennemi qui recall ou qui AA immobile. Passif : vitesse sur les alliés que tu touches. Mid game : R pour engager ou disengage, Q sur le dive.',
+m:[['Leona','Q sur elle quand elle E (elle est immobile en arrivant).'],['Blitzcrank','Reste derrière les sbires, W soigne l\'allié grabé.'],['Pyke','Q quand il E, W pour soigner.']],
+k:['Q après R = stun facile (la vague ralentit).','E sur ton jungler qui gank = ses AA ralentissent.'],
+v:'Bonne avec un ADC agressif (Lucian, Draven) · Difficile contre les compos qui la dive'},
+
+Nasus:{r:['TOP'],t:'Juggernaut scaling stacks',s:['Niveau 6','2 objets','Late game'],
+c:'Q (AA renforcée, stack sur last-hit : +3 sur cannon / champion / gros monstre) → W (slow massif, AS réduite) → E (zone, réduit l\'armure). R : PV, dégâts de zone, Q réduit. Combo : W → Q → E → R.',
+b:'Sheen → Trinity Force / Iceborn → Frozen Heart / Sterak / Spirit Visage · Bottes plaquées / Mercury · Fleet ou Grasp (Conquérant vs tanks)',
+p:'Lvl 1–5 : stack Q sur chaque last-hit, ne trade pas, farm sous tour si besoin. Objectif : 300 stacks à 20 min. Post-6 : R = tu gagnes les 1v1 contre la majorité. Side push : les tours tombent en 3 Q. TP pour les fights.',
+m:[['Darius','Il te bat pré-16 : farm à distance, W quand il approche, ne stack pas au corps à corps.'],['Vayne','Kite : joue le map, side push.'],['Teemo','Aveuglement sur ton Q : stack sur les sbires quand il n\'est pas là, W pour le rattraper.']],
+k:['Q sur un cannon = 12 stacks : ne les rate jamais.','W à 5 points = 95 % de slow : lance-le sur l\'ADC en fight.'],
+v:'Bon contre les mêlées lentes en late · Difficile contre le kite et les lanes agressives early'},
+
+Nautilus:{r:['SUPPORT'],t:'Tank engage',s:['Niveau 2','Niveau 6','1er objet'],
+c:'Q (grappin, tire vers la cible / vers un mur) → AA (passif : root sur le premier coup) → W (bouclier, dégâts de zone) → E (slow) → R (knock-up ciblé qui traverse). Combo : Q → AA → R → E → W.',
+b:'Objet support → Locket → Knight\'s Vow / Thornmail · Bottes plaquées / Mercury · Aftershock',
+p:'Lvl 2 : Q sur l\'ADC adverse + AA root = kill avec ton ADC. Ne rate pas le Q : lance-le quand l\'ennemi AA (immobile). Mid game : R sur le carry adverse = knock-up sur tout ce qu\'il traverse, W pour tanker, tu es le meilleur engage du jeu.',
+m:[['Morgana','Bouclier noir annule Q + root : engage après son E.'],['Janna','Tornade annule Q : engage quand sa Q est en CD.'],['Alistar','Il t\'engage en retour : Q sur l\'ADC pas sur lui.']],
+k:['Q sur un mur = escape ou repositionnement.','Passif root sur chaque cible différente : AA chaque ennemi une fois.'],
+v:'Bon contre les ADC immobiles · Difficile contre les enchanteurs disengage'},
+
+Neeko:{r:['MID','SUPPORT'],t:'Mage engage AoE',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : copie un allié (ou un sbire / une plante). E (root, plus long à travers plusieurs cibles) → Q (3 explosions) → W (clone, AA renforcée). R : saut → stun de zone. Combo : E → Q → R (déguisée = R surprise).',
+b:'Luden\'s Echo → Shadowflame / Zhonya → Rabadon · Bottes du sorcier · Électrocution ou Aery',
+p:'Lane : poke Q, E quand l\'ennemi est aligné. Déguise-toi en ton support pour un engage surprise. Post-6 : Flash + R sur 3 cibles = fight gagné. Support : E → Q sur l\'ADC adverse, W pour fuir (clone).',
+m:[['Zed','Zhonya. E quand il sort de R.'],['Yasuo','Mur bloque E et Q : E quand W est en CD.'],['Fizz','Il esquive E : E après son saut.']],
+k:['Déguisée en sbire dans une wave = R surprise sur 3 ennemis.','E qui traverse un sbire puis un champion = root plus long.'],
+v:'Bonne contre les compos groupées · Difficile contre les assassins'},
+
+Nidalee:{r:['JUNGLE'],t:'Assassine poke / mobilité',s:['Niveau 3','1er objet','2 objets'],
+c:'Humaine : Q (lance : plus loin = plus de dégâts) → marque → R (cougar) : W (saut sur cible marquée = reset) → Q (dégâts sur PV manquants) → E (griffes). Combo : Q humaine → cougar W → Q → E → humaine E (soins).',
+b:'Liandry / Hextech Rocketbelt → Lich Bane / Shadowflame → Rabadon / Zhonya · Ionian / sorcier · Électrocution ou Dark Harvest',
+p:'Clear rapide avec le cougar (W/E), gank lvl 3 : lance Q depuis le brouillard sur l\'ennemi qui recule. Une lance touchée = un kill. Invade et prends les objectifs (tu les fais vite). Tu baisses après 20 min : snowball.',
+m:[['Rammus','Il te contre au contact : joue poke et objectifs.'],['Warwick','Il te sent : ne gank pas basse.'],['Lillia','Elle est aussi rapide : évite le 1v1.']],
+k:['Lance longue distance = jusqu\'à 3× dégâts : recule avant de tirer.','W cougar sur une cible marquée = reset du saut, poursuite infinie.'],
+v:'Bonne contre les jungler lents et les compos immobiles · Difficile contre les tanks et les CC'},
+
+Nilah:{r:['ADC'],t:'ADC mêlée burst',s:['Niveau 6','2 objets','3 objets'],
+c:'Q (AA renforcées, portée, soins passifs de ton support partagés) → W (esquive les AA, vitesse) → E (dash sur cible, 2 charges) → R (tire les ennemis, dégâts + soins). Combo : E → Q → AA → E → R. Passif : XP partagée bonus avec le support.',
+b:'Collector ou Bloodthirster → Infinity Edge → Navori / Lord Dominik · Berserker · Conquérant ou Précision',
+p:'Lvl 1–5 : farm au Q, trade E → Q → E retour quand l\'ennemi est avancé, W contre l\'ADC qui te tape. Avec un support enchanteur, tu profites du double soin. Post-6 : all-in R sur 2 cibles. Mid game : E sur les sbires pour entrer.',
+m:[['Caitlyn','Portée : W bloque ses AA ; entre via E quand elle est avancée.'],['Ashe','Elle te kite : W ses AA, E quand elle W.'],['Draven','Il tape fort mais tu bloques ses AA avec W : trade sous W.']],
+k:['W bloque les AA (pas les sorts) : lance-le contre l\'ADC.','E sur un sbire = dash gratuit d\'entrée et de sortie.'],
+v:'Bonne contre les ADC AA et les compos groupées · Difficile contre les mages poke'},
+
+Nocturne:{r:['JUNGLE'],t:'Assassin dive',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (traînée : vitesse + AD) → AA (passif : AoE + soins) → E (peur après 2 s, cible attachée) → R (noir : vision réduite, dash sur la cible). Gank post-6 : R → E → Q → AA.',
+b:'Eclipse ou Youmuu → Black Cleaver / Edge of Night → Serylda / Death\'s Dance · Bottes plaquées / Ionian · Conquérant ou Électrocution',
+p:'Full clear (AA AoE), gank lvl 4 avec E depuis un bush. Post-6 : R sur les lanes sans escape = kill quasi garanti, ping avant. W bloque un sort : garde-le pour le CC clé. Late : R sur le carry en teamfight.',
+m:[['Rammus','Il te contre : joue les R sur les lanes loin de lui.'],['Lillia','Elle te kite : gank plus tôt.'],['Warwick','Il te suit : R sur des cibles loin de lui.']],
+k:['W bloque un sort ciblé ou une compétence : temps-le sur le CC clé (Lux Q, Morgana Q).','R retire la vision : les ennemis ne voient pas ton équipe arriver.'],
+v:'Bon contre les carries sans escape · Difficile contre les tanks et les compos disengage'},
+
+Nunu:{r:['JUNGLE'],t:'Tank objectifs / roam',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (boule de neige : roule, knock-up en fin de course) → E (boules de neige, root si 3 touchent) → Q (consomme : soins, dégâts bonus sur monstres). R : canal, slow + bouclier, dégâts massifs à la fin. Gank : W depuis loin → E → Q.',
+b:'Sunfire / Heartsteel → Thornmail / Jak\'Sho → Spirit Visage · Mercury / plaquées · Aftershock ou Phase Rush (AP : Rocketbelt → Rabadon)',
+p:'Q = tu voles n\'importe quel camp / objectif (smite + Q). Invade le jungler adverse dès lvl 2, gank avec W. Objectifs : tu sécurises le dragon et le Baron seul. Mid game : W sur les carries, R après un CC allié.',
+m:[['Kindred','Elle te kite : prends ses camps, elle ne peut pas te tuer.'],['LeeSin','Il te bat en duel early : invade quand il est loin, pas quand il est là.'],['Kayn','Il te fuit via les murs : joue les objectifs.']],
+k:['Q + Smite = 2 000 dégâts sur un objectif : aucun jungler ne te le vole.','W à pleine vitesse = knock-up + traverse les murs.'],
+v:'Bon contre les jungler farmers et les compos sans anti-tank · Difficile contre le % PV'},
+
+Olaf:{r:['JUNGLE','TOP'],t:'Bruiser anti-CC',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (hache, slow, ramasse-la pour reset) → E (vrais dégâts, coûte des PV) → W (AS + soins). R : immunité aux CC + AD, tant que tu frappes. Combo : Q → AA → E → W → R. Ramasse chaque hache.',
+b:'Sundered Sky ou Trinity → Sterak → Death\'s Dance / Spirit Visage · Bottes plaquées · Conquérant ou Phase Rush',
+p:'Jungle : clear avec Q + E, invade lvl 2 (tu bats tout le monde en duel). Gank lvl 3 les lanes avancées. Post-6 : R sur le carry = personne ne peut te CC, tue-le puis reviens. Top : trade Q + E, all-in lvl 6.',
+m:[['Kindred','Elle te kite : gank et objectifs.'],['Nunu','Il te vole : joue à côté de lui pour reprendre.'],['Rammus','Il te tank : joue le map.']],
+k:['R annule les CC subis ET rend immunisé : lance-le avant d\'entrer.','Q ramassée = CD réduit : marche sur la hache.'],
+v:'Bon contre les carries et les CC · Difficile contre les tanks et les compos qui le kite'},
+
+Orianna:{r:['MID'],t:'Mage contrôle teamfight',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (balle) → W (zone, slow/vitesse) → E (bouclier + balle sur un allié) → R (attire tous les ennemis autour de la balle). Combo : Q → W → R → E. Teamfight : E sur ton bruiser qui engage, R quand il est dans 3+ ennemis.',
+b:'Luden\'s Echo → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Aery, Comète ou Électrocution',
+p:'Lane : poke Q + W, AA passif quand l\'ennemi last-hit. Push et roam quand la balle est sur toi. Post-6 : R sur 2+ = kill avec le jungler. Ton E est un bouclier de dive : sur ton jungler qui gank.',
+m:[['Zed','Zhonya. E sur toi quand il R, R quand il sort.'],['Fizz','Il esquive R avec E : R après son saut.'],['Yasuo','Mur bloque Q : Q par le côté, R sur lui après son dash.']],
+k:['La balle a une laisse : si tu t\'éloignes elle revient. Garde-la sur l\'allié frontline.','R + Flash = engage surprise sur le backline.'],
+v:'Bonne contre les compos groupées · Difficile contre les assassins mobiles'},
+
+Ornn:{r:['TOP'],t:'Tank forge / engage',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (fissure, slow + pilier) → E (charge, brise le pilier / un mur = knock-up de zone) → W (souffle, marque « fragile ») → AA sur cible fragile = dégâts bonus. R : bélier (lance 2 fois : slow puis knock-up). Combo : Q → E (sur pilier) → W → AA → R.',
+b:'Sunfire / Heartsteel → Thornmail / Jak\'Sho → Frozen Heart / Kaenic · Bottes plaquées / Mercury · Grasp',
+p:'Lvl 1–5 : farm, W + AA trade, forge tes objets sur la lane (passif). Post-6 : R engage à distance, tu ne perds jamais un fight à 5. Lvl 13+ : améliore les objets alliés (Masterwork). Tu es le meilleur frontline du jeu.',
+m:[['Fiora','Elle te vital : farm, ne 1v1 pas.'],['Vayne','% PV : joue le map, R sur elle en fight.'],['Darius','Il te bat pré-6 : farm, W pour bloquer ses trades.']],
+k:['E sur un mur = knock-up de zone : dive sous tour ou escape.','R recast = tu fonces sur le bélier et l\'envoies plus loin.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le % PV et les duelists'},
+
+Pantheon:{r:['SUPPORT','TOP','MID','JUNGLE'],t:'Bruiser engage / roam',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (tap : lance courte, hold : longue, dégâts + exécute) → W (saut, stun) → E (bloque tous les dégâts frontaux, dégâts à la fin) → AA (passif : 4 coups = sort renforcé). R : saut global-ish. Combo : W → AA → Q → E → Q.',
+b:'Eclipse / Youmuu → Black Cleaver / Edge of Night → Death\'s Dance / Serylda · Bottes plaquées / Ionian · Conquérant ou Précision',
+p:'Lvl 2–3 : W → Q = all-in, tu gagnes presque tous les trades. Support : W sur l\'ADC adverse avec un ADC agressif. Post-6 : R sur un fight bot / mid depuis n\'importe où. Tu baisses en late : snowball, ferme.',
+m:[['Fiora','Elle pare W : lance W quand sa parade est en CD.'],['Kayle','Elle scale : tue-la tôt, sinon R sur les fights.'],['Malphite','Tank : joue le map.']],
+k:['E bloque tous les dégâts venant de face (Karthus R, Darius R, Caitlyn R), pas ceux de derrière : oriente-toi.','Passif à 4 coups : le prochain sort est renforcé (Q = dégâts massifs, W = 3 coups, E = explosion finale) : garde-le pour Q ou W selon le trade.'],
+v:'Bon contre les mêlées et les lanes lentes · Difficile contre les tanks et les compos qui scale'},
+
+Poppy:{r:['TOP','JUNGLE','SUPPORT'],t:'Tank anti-dash',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (frappe + zone, slow) → AA (passif : bouclier) → W (bloque les dashes ennemis, vitesse) → E (charge : stun contre un mur). R : tap = knock-up court, hold = renvoie les ennemis loin. Combo : E (mur) → Q → AA → W.',
+b:'Iceborn / Sundered Sky → Thornmail / Kaenic → Frozen Heart / Sterak · Bottes plaquées · Grasp (top) ou Aftershock',
+p:'Lane : trade E → Q quand l\'ennemi est près d\'un mur / de tes sbires. W quand il dash. Post-6 : R hold = envoie le jungler / le tank adverse loin du fight (disengage), tap pour interrompre. Side : tu gagnes les 1v1 contre les dashers.',
+m:[['Darius','Il te bat en trade long : Q → recule, W ses E.'],['Kayle','Elle scale : tue-la tôt.'],['Vayne','Kite : W ses tumbles, E sur mur.']],
+k:['W stop les dashes de tout le monde (Lee Sin, Vi, Yasuo) : lance-le en teamfight sur l\'engage.','R hold sur un Malphite / Amumu = il quitte le fight 3 s.'],
+v:'Bonne contre les dashers et les engages · Difficile contre le poke et le kite'},
+
+Pyke:{r:['SUPPORT'],t:'Assassin support',s:['Niveau 2','Niveau 6','1er objet'],
+c:'Q (tap : coup, hold : grappin) → E (dash, stun sur le trajet en revenant) → AA. W (invisible + vitesse) pour approcher. R : exécute sous un seuil, reset + or partagé. Combo : W → Q → E → R. Passif : PV gris régénérés hors vision.',
+b:'Youmuu → Edge of Night / Opportunity → Serylda / Umbral Glaive · Ionian / Mobility · Hail of Blades ou Aftershock',
+p:'Lvl 2 : Q → E = kill avec ton ADC. Roam mid dès que la wave push. Post-6 : R exécute = or pour ton ADC aussi. Mid game : pick avec Q depuis le brouillard, W pour reset le passif, R reset sur chaque exécution.',
+m:[['Morgana','Bouclier noir : engage après.'],['Braum','Bouclier bloque Q : Q par le côté.'],['Leona','Elle te tue au corps à corps : joue Q depuis loin, roam.']],
+k:['Recule dans le brouillard pour régénérer les PV gris.','R = exécute sur toute cible sous le seuil : regarde la marque sur la barre de vie.'],
+v:'Bon contre les ADC immobiles et les compos qui roam peu · Difficile contre les tanks et les boucliers'},
+
+Qiyana:{r:['MID','JUNGLE'],t:'Assassine éléments',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (prend un élément : herbe = invisible, rivière = root, roche = exécute) → Q (lame élémentaire) → E (dash sur cible) → AA (passif). R : onde qui stun contre les murs. Combo : W (roche) → E → Q → AA → R (contre un mur) → Q.',
+b:'Eclipse / Youmuu → Edge of Night / Opportunity → Serylda / Black Cleaver · Ionian / plaquées · Électrocution ou First Strike',
+p:'Lane : poke Q (rivière) pour le root, herbe pour un trade surprise. Lvl 3 : E → Q roche sur ennemi bas. Post-6 : R contre un mur en teamfight = stun sur 3. Roam avec l\'herbe (invisible).',
+m:[['Galio','Il te taunt : farm, roam.'],['Malzahar','Bouclier passif : Q pour casser, R te tue : QSS.'],['Lissandra','Elle te CC après E : W herbe pour l\'approche.']],
+k:['Q rivière = root : poke via l\'eau en lane.','R stun uniquement contre le terrain (murs, structures) : vise les murs.'],
+v:'Bonne contre les mages immobiles · Difficile contre les tanks CC'},
+
+Quinn:{r:['TOP','MID','ADC'],t:'Marksman roam',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (aveugle + dégâts) → AA (passif : marque Valor, AA renforcée) → E (dash, knock-back + slow). R : forme oiseau (vitesse), sortie = dégâts de zone. Combo : E → AA → Q → AA.',
+b:'Kraken / Youmuu → Collector → Infinity Edge / Lord Dominik · Berserker / Ionian · Fleet ou Précision',
+p:'Lane : poke AA + Q sur les mêlées, E pour sortir des trades. Tu gagnes la lane contre les mêlées lents. Post-6 : roam avec R (vitesse énorme), gank bot ou mid. Split push et rejoins les fights vite.',
+m:[['Malphite','Il t\'engage à travers : farm, joue les roams.'],['Irelia','Elle dash sur toi : E quand elle Q, ne push pas seul.'],['Yasuo','Mur bloque tes AA/Q : trade quand W est en CD.']],
+k:['E = knock-back qui interrompt les dashes.','R = tu es le champion le plus rapide du jeu : sois partout.'],
+v:'Bonne contre les mêlées lents · Difficile contre les dashers et les tanks'},
+
+Rakan:{r:['SUPPORT'],t:'Engage mobile',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (saut + knock-up) → R (charme de zone, vitesse) → E (dash vers un allié, bouclier) pour sortir. Q (dégâts + soins sur allié). Combo engage : R → W (charme puis knock-up) → E retour. Avec Xayah : E plus loin.',
+b:'Objet support → Locket / Zeke\'s → Redemption / Knight\'s Vow · Ionian / Mobility · Aftershock ou Guardian',
+p:'Lvl 2 : W engage quand l\'ADC adverse est avancé, E retour immédiat. Ne reste pas au contact. Post-6 : R → W = engage de fight, ou W → R selon les CD. Mid game : engage sur le carry puis E sur ton carry pour le protéger.',
+m:[['Morgana','Bouclier noir : W après.'],['Janna','Elle te repousse : engage quand sa Q est en CD.'],['Ashe','Elle te ralentit après W : E retour vite.']],
+k:['E a 2 casts : va et retour en 5 s.','R charme aussi en marchant : passe à travers les 5 ennemis.'],
+v:'Bon contre les ADC immobiles et les compos groupées · Difficile contre les disengage'},
+
+Rammus:{r:['JUNGLE'],t:'Tank anti-AD',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (roule, vitesse, knock-back) → E (taunt) → W (armure/RM, renvoie les dégâts) → AA → R (saute sur une zone : slow + dégâts). Gank : Q → E → W. Anti-carry : taunt sur l\'ADC en fight.',
+b:'Thornmail → Sunfire / Heartsteel → Jak\'Sho / Frozen Heart · Mercury / plaquées · Aftershock',
+p:'Clear moyen, gank lvl 4 : Q est ta portée. Tu contre les jungler AA (Yi, Belveth, Kindred) : W et ils meurent. Post-6 : R pour engager de loin, taunt le carry. Objectifs : tank tout.',
+m:[['Lillia','Elle te kite : gank et farm.'],['Karthus','AP : joue ganks, il ne te tue pas.'],['Nunu','Il te vole : commence côté opposé.']],
+k:['W renvoie les dégâts : les ADC se tuent en te tapant.','E taunt force les AA sur toi : W juste avant.'],
+v:'Bon contre les AD et les jungler AA · Difficile contre les AP et le % PV'},
+
+RekSai:{r:['JUNGLE'],t:'Bruiser / assassine tunnels',s:['Niveau 3','1er objet','2 objets'],
+c:'Q (3 coups rapides) → W (sortir du sol = knock-up) → E (morsure : vrais dégâts à 100 de fureur). Enfouie : Q (projectile), E (tunnel = dash, réutilisable), W (sortir). R : saute sur une cible marquée (dégâts sur PV manquants). Combo : tunnel → W → Q → E → R.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Full clear rapide (Q, soins passifs enfouie), gank lvl 3 via tunnel : W knock-up = kill. Tremblement (enfouie) = tu vois le jungler adverse. Post-6 : R exécute une cible marquée à distance.',
+m:[['Nunu','Il te vole : commence côté opposé.'],['Rammus','Il te contre : joue objectifs.'],['Lillia','Elle te kite : gank tôt.']],
+k:['Les tunnels restent 10 min : place-les pour tes escape.','Enfouie, tu vois les mouvements ennemis en tremblements : détecte les invades.'],
+v:'Bonne contre les jungler faibles early · Difficile contre les tanks et les CC'},
+
+Rell:{r:['SUPPORT','JUNGLE'],t:'Tank engage',s:['Niveau 2','Niveau 6','1er objet'],
+c:'W (saut, knock-up : à cheval = charge) → Q (stun court, casse les boucliers) → E (attire / stun avec un allié lié). R : attire et maintient les ennemis proches. Combo : W → Q → R → AA (passif : vole les résistances).',
+b:'Objet support → Locket → Knight\'s Vow / Thornmail · Bottes plaquées / Mercury · Aftershock',
+p:'Lvl 2 : W → Q engage avec ton ADC, tu gagnes les 2v2. Ne rate pas W (délai). Mid game : R + W sur 3 ennemis = fight gagné, E lié à ton bruiser pour un 2e CC. Flash + W sur le backline.',
+m:[['Morgana','Bouclier noir : Q le casse ! Q sur l\'ADC bouclié puis W.'],['Janna','Tornade annule W : engage quand sa Q est en CD.'],['Lulu','Polymorph pendant W : attends.']],
+k:['Q casse les boucliers : anti-Morgana, anti-Lulu.','R attire en continu : place-toi au centre des 3.'],
+v:'Bonne contre les ADC immobiles et les boucliers · Difficile contre les disengage'},
+
+Renata:{r:['SUPPORT'],t:'Enchanteresse contrôle',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (crochet : root puis lance la cible) → E (missile : bouclier alliés + dégâts / slow) → W (sur un allié : AS + revive temporaire, kill = survie). R : rend fous les ennemis (ils s\'attaquent). Combo : E → Q → R sur 3.',
+b:'Objet support → Ardent Censer / Moonstone → Redemption / Locket · Ionian · Aery ou Guardian',
+p:'Lane : Q sur l\'ennemi avancé (root + lance-le vers ton ADC), E bouclier pour les trades. W sur l\'ADC qui va mourir = il continue de tuer. Mid game : R sur 3+ ennemis = ils se tuent entre eux.',
+m:[['Leona','Q sur elle quand elle E : root.'],['Blitzcrank','Reste derrière, W sur l\'allié grabé.'],['Zyra','Poke : hors de portée, E bouclier.']],
+k:['Q recast lance la cible dans une direction : envoie l\'ennemi vers ton tour.','W : si l\'allié a un kill pendant le revive, il vit.'],
+v:'Bonne contre les engages et les compos groupées · Difficile contre le poke'},
+
+Renekton:{r:['TOP'],t:'Bruiser early dominant',s:['Niveau 3','Niveau 6','1er objet'],
+c:'E (dash) → W (stun, 3 coups : à 50 fureur = stun long + dégâts) → Q (soins, à 50 fureur = plus) → E retour (sur une cible touchée). R : PV + dégâts de zone + fureur. Combo : E → W → Q → E. Gère la fureur pour le W.',
+b:'Eclipse / Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 1–5 : tu domines : E → W → Q → E dès que l\'ennemi last-hit. Post-6 : all-in R. Tu baisses en late : snowball, prends les plaques, TP bot pour un fight, ferme avant 30 min.',
+m:[['Malphite','Il tank tout : farm, joue le map.'],['Kayle','Tue-la pré-6 ou elle te dépasse.'],['Ornn','Tank : farm, TP.']],
+k:['Fureur 50 = W stun 1,5 s : garde-la pour le trade décisif.','E retour ne marche que si tu as touché une cible.'],
+v:'Bon contre les mêlées et les mages early · Difficile contre les tanks et les scaling'},
+
+Rengar:{r:['JUNGLE','TOP'],t:'Assassin bushes',s:['Niveau 3','1er objet','2 objets'],
+c:'Passif : saut depuis un bush. 4 fureur = sort renforcé (Q = crit, W = soins, E = root). Combo : bush → saut → Q → AA → W → E → Q renforcé. R : invisible, révèle le carry le plus proche, saut. Combo R : R → saut → Q → AA → Q renforcé.',
+b:'Eclipse / Youmuu → Edge of Night / Opportunity → Serylda / Black Cleaver · Ionian / plaquées · Conquérant ou Électrocution',
+p:'Full clear avec Q, gank via les bushes lvl 3 (saut = kill). Colle les trophées (passif : bonus). Post-6 : R sur le carry isolé, un kill = un Q reset. Fais tes bushes : chaque camp bush est un gank.',
+m:[['Rammus','Il te contre : joue les carries loin de lui.'],['LeeSin','Duel dur early : gank plus vite.'],['Warwick','Il te sent : ne gank pas bas.']],
+k:['W renforcé retire les CC : garde-le si l\'ennemi a un stun.','Le saut se fait aussi depuis les bushes de la rivière et de la lane.'],
+v:'Bon contre les carries isolés · Difficile contre les tanks et les compos qui ward les bushes'},
+
+Riven:{r:['TOP'],t:'Duelist combo',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (3 coups, le 3e knock-up), annule les animations avec un AA entre chaque Q. E (dash + bouclier) → W (stun de zone) → Q Q Q. R1 (portée + AD) → R2 (onde, exécute selon PV manquants). Combo : E → W → Q → AA → Q → AA → Q → R2.',
+b:'Eclipse ou Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 1–3 : trade Q → AA → W → E retour. Post-6 : all-in R1 → E → W → Q Q Q → R2. Tu gagnes les 1v1 après 1 objet : side push, TP. Fast Q cancel = ton DPS ; entraîne-le en outil d\'entraînement.',
+m:[['Malphite','Il tank : farm, joue le map.'],['Renekton','Il gagne lvl 1–5 : E de fuite, trade quand son E est en CD.'],['Fiora','Elle pare W : lance W en dernier.']],
+k:['Q3 sur un mur = escape (tu sautes par-dessus).','R2 exécute : lance-le à 25 % PV, pas avant.'],
+v:'Bonne contre les mêlées et les mages · Difficile contre les tanks et les parades'},
+
+Rumble:{r:['TOP','MID','JUNGLE'],t:'Mage AP DPS / zone',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (lance-flammes, cône) → E (harpons, slow, 2 charges) → W (bouclier + vitesse). Chaleur > 50 = danger zone (dégâts bonus) ; 100 = silence 6 s. R : zone de dégâts en ligne (teamfight). Combo : E E → Q → W → R.',
+b:'Liandry → Rylai / Blackfire Torch → Zhonya / Rabadon · Bottes du sorcier · Conquérant ou Comète',
+p:'Lvl 1–5 : trade Q en danger zone (50+ chaleur) puis recule. Tu gagnes contre les mêlées. Post-6 : R sur la wave ou en fight = zone gagnée. Objectifs : R sur le dragon pour zoner. Ne surchauffe pas au mauvais moment.',
+m:[['Renekton','Il dash à travers : E E pour le ralentir, Q en danger zone.'],['Kayle','Elle scale : tue-la tôt.'],['Malphite','Tank : farm, joue le map.']],
+k:['Surchauffe volontaire = AA renforcées : à 100 chaleur tes AA font des dégâts magiques.','R en diagonale = plus de temps dans la zone pour l\'ennemi.'],
+v:'Bon contre les mêlées et les compos groupées · Difficile contre le poke longue portée'},
+
+Ryze:{r:['MID','TOP'],t:'Mage DPS scaling mana',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Q (projectile, reset par E / W) → E (propagation) → Q. Combo : E → W (root) → Q → E → Q. Sur une cible marquée par E, W root. R : portail pour toute l\'équipe (Baron, fuite). Farm : E sur la wave → Q.',
+b:'Rod of Ages → Seraph → Rylai / Rabadon · Bottes du sorcier / Ionian · Phase Rush ou Conquérant',
+p:'Lvl 1–5 : farm, trade E → Q. Tu es faible : RoA + Tear puis tu deviens un DPS. Post-6 : R = objectifs et escapes de groupe. Late : side lane, R pour rejoindre / fuir, tu gagnes les 1v1 avec Seraph.',
+m:[['Zed','Zhonya / Seraph, E → W root quand il sort de R.'],['Yasuo','Mur bloque Q : E d\'abord, Q ensuite.'],['Fizz','Il esquive Q : E puis W root.']],
+k:['E sur plusieurs cibles → Q touche toute la zone.','R portail aussi pour fuir : ton équipe suit si elle est dans le cercle.'],
+v:'Bon contre les mêlées et les tanks · Difficile contre les assassins early'},
+
+Samira:{r:['ADC'],t:'ADC mêlée burst',s:['Niveau 6','2 objets','3 objets'],
+c:'Passif : style (S) monte à chaque sort différent. Q (à distance : tir, au contact : coup) → E (dash sur cible) → AA → W (bloque les projectiles) → Q. R à S = massacre (AoE, soins). Combo : E → AA → Q → W → AA → R.',
+b:'Collector / Bloodthirster → Infinity Edge → Lord Dominik / Immortal Shieldbow · Berserker · Conquérant',
+p:'Lvl 1–5 : farm au Q, trade avec support engage (E sur l\'ennemi CC). W contre les projectiles (Ezreal Q, Ashe R). Post-6 : R après un CC allié = fight gagné. Joue avec Leona / Nautilus / Rell.',
+m:[['Ashe','Elle te kite : W sa R, E quand elle W.'],['Caitlyn','Portée : W ses AA, entre via E après un CC.'],['Ezreal','Il poke et fuit : W ses Q, push.']],
+k:['E cible n\'importe quel ennemi (y compris un sbire) : entre par un sbire, sors par le support.','Style S = 6 sorts différents : varie Q à distance / Q mêlée.'],
+v:'Bonne avec un support engage · Difficile contre le poke et le kite'},
+
+Sejuani:{r:['JUNGLE'],t:'Tank engage CC',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (charge, knock-up) → W (2 coups, marque) → E (stun sur 4 stacks : tes AA et ceux des alliés mêlée). R : lance, stun sur la 1re cible, slow de zone. Combo : Q → W → AA → E → R.',
+b:'Sunfire / Heartsteel → Thornmail / Jak\'Sho → Kaenic / Frozen Heart · Mercury / plaquées · Aftershock',
+p:'Full clear (W AoE), gank lvl 3 : Q est ta portée, E stun avec le laner mêlée. Post-6 : R sur le carry adverse, Q derrière, tu tank tout. Objectifs : tu les fais bien avec le passif (armure).',
+m:[['Lillia','Elle te kite : gank tôt.'],['Karthus','Il ne te tue pas mais farm mieux : gank.'],['Nunu','Il te vole : commence côté opposé.']],
+k:['E stack via tes alliés mêlée : gank les lanes mêlée.','Q traverse les murs : chemins de gank surprises.'],
+v:'Bonne contre les compos groupées avec mêlées alliés · Difficile contre le % PV'},
+
+Senna:{r:['SUPPORT','ADC'],t:'ADC / support scaling portée',s:['1er objet','2 objets','Late game'],
+c:'AA (passif : les ennemis droppent des brumes → stacks de portée) → Q (soigne alliés, blesse ennemis, reset AA) → W (root de zone après un délai) → E (camouflage pour toi et alliés). R : global : bouclier alliés, dégâts ennemis.',
+b:'Kraken / Collector → Rapid Firecannon → Infinity Edge / Youmuu (support : Bloodsong → Umbral → Collector) · Berserker / Ionian · Fleet ou Précision',
+p:'Lane : AA chaque ennemi une fois (brume), ramasse les brumes = ton scaling. Q via un sbire pour toucher. Ne trade pas au contact. Mid game : ta portée explose, W root sur l\'engage, R sur les fights loin (bouclier + dégâts).',
+m:[['Leona','Elle t\'engage : E camouflage, W root quand elle E.'],['Blitzcrank','Reste derrière, Q pour soigner.'],['Pyke','Il te grab : E camouflage, ne ward pas seule.']],
+k:['Une brume = +portée, +AD, +crit : ramasse-les toutes.','R global pour sauver un allié à 100 PV de l\'autre côté.'],
+v:'Bonne avec un tank support / un ADC scaling · Difficile contre les engages early'},
+
+Seraphine:{r:['SUPPORT','ADC','MID'],t:'Enchanteresse AoE / CC',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : 3 sorts = le 4e est doublé (écho). Q (dégâts de zone) → W (bouclier + vitesse, soins si alliés bouclés) → E (slow, root si déjà ralenti). R : charme en ligne, prolongé par chaque champion touché. Combo : E → E écho (root) → Q → R.',
+b:'Objet support → Moonstone / Ardent Censer → Redemption / Shurelya (ADC : Luden → Rabadon) · Ionian · Aery ou Comète',
+p:'Lane : poke Q + AA à distance, E sur l\'ennemi qui approche. W à 3 stacks = soins de zone. Post-6 : R à travers ton équipe pour charmer 3 ennemis = fight gagné. Reste derrière, tu es immobile.',
+m:[['Blitzcrank','Reste derrière les sbires, W bouclier.'],['Leona','E root quand elle E, W.'],['Pyke','E quand il E, W pour la vitesse.']],
+k:['E puis E écho = root garanti.','R traverse les alliés = plus loin, plus de cibles.'],
+v:'Bonne contre les compos groupées · Difficile contre les assassins'},
+
+Sett:{r:['TOP','SUPPORT'],t:'Bruiser grit',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (2 AA renforcées, vitesse vers la cible) → AA (passif : coup droit / coup gauche) → E (attire et stun si ennemis des 2 côtés) → W (grit : vrais dégâts au centre, bouclier). R : saisit un ennemi et le projette sur son équipe. Combo : Q → AA → E → W → R.',
+b:'Sundered Sky / Stridebreaker → Sterak → Death\'s Dance / Titanic · Bottes plaquées · Conquérant ou Grasp',
+p:'Lvl 1–3 : trade Q + AA + E, W après avoir pris des dégâts (grit). Post-6 : R sur le carry en teamfight = tu l\'amènes dans ton équipe. Side : tu gagnes les 1v1 sans mobilité. Support : E sur 2 = stun.',
+m:[['Vayne','Kite : ne la chasse pas, E quand elle approche.'],['Fiora','Elle te vital : farm, joue le map.'],['Kayle','Tue-la pré-6.']],
+k:['W centre = vrais dégâts massifs : vise la ligne du milieu.','E avec un ennemi de chaque côté = stun.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le kite et les parades'},
+
+Shaco:{r:['JUNGLE','SUPPORT'],t:'Assassin / pièges',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (invisible + blink, AA crit dans le dos) → AA → E (dagger, slow, exécute selon PV manquants) → W (boîtes : peur). R : clone (explose, ou tank les ennemis). Gank : W dans le bush → Q → AA → E. Support AP : W dans les bushes, E poke.',
+b:'AD : Youmuu → Edge of Night → Serylda. AP : Liandry → Rabadon · Ionian / sorcier · Hail of Blades ou Électrocution',
+p:'Clear avec W (boîtes), gank lvl 3 via Q invisible. Pièges W sur les chemins de gank adverses et le Baron. Post-6 : R clone pour fake un fight ou sortir. Tu es fort early et faible en fight à 5 : pick et split.',
+m:[['Warwick','Il te sent : joue loin de lui.'],['LeeSin','Il te bat en duel : évite, gank.'],['Rammus','Il te contre : joue les boîtes et les pick.']],
+k:['W dans un bush = vision + peur : le dragon et le Baron deviennent tiens.','R clone déclenche les tours : dive le clone d\'abord.'],
+v:'Bon contre les compos sans vision · Difficile contre les pinks et les tanks'},
+
+Shen:{r:['TOP','SUPPORT'],t:'Tank global',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (attire ton épée, 3 AA renforcées, plus fort si l\'épée traverse un ennemi) → E (dash, taunt) → W (zone : bloque les AA). R : bouclier global sur un allié + TP sur lui. Combo : E → Q → AA → W.',
+b:'Heartsteel / Sunfire → Thornmail / Titanic → Jak\'Sho / Kaenic · Bottes plaquées / Mercury · Grasp',
+p:'Lvl 1–5 : trade Q (épée à travers l\'ennemi) → AA, tank. Post-6 : R sur ton carry bot en danger = fight gagné, ping avant. Side push top et R quand ça fight : tu es un support global.',
+m:[['Darius','Il te bat en trade : Q via lui, recule avec W.'],['Vayne','Kite : joue le map.'],['Fiora','Vitals : farm, joue R.']],
+k:['W bloque les AA (Draven, Jinx) pendant 1,75 s : pose-le sur ton carry.','R canal 3 s : lance-le avant que l\'allié tombe, pas à 50 PV.'],
+v:'Bon avec des carries qui se font dive · Difficile contre les duelists en side'},
+
+Shyvana:{r:['JUNGLE'],t:'Bruiser dragon',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (2 AA) → W (aura, vitesse) → E (feu, marque : dégâts % PV). R : dragon (dash), sorts améliorés (E = zone, W = plus grand). Combo gank : R vers la cible → E → Q → W. Chaque dragon tué = plus de dégâts / résistances.',
+b:'Nashor\'s Tooth / Liandry (AP) ou Eclipse / Sundered Sky (AD) → Rabadon / Black Cleaver · Berserker / plaquées · Conquérant ou Précision',
+p:'Full clear le plus rapide (W + Q), tu farms jusqu\'à 6 puis tu gank avec R. Tue chaque dragon (passif). Post-6 : R engage à travers les murs, E sur le groupe. Tu es forte à 2 objets : objectifs + fights.',
+m:[['Kindred','Elle te kite : farm, ne fight pas sans R.'],['LeeSin','Il te bat early : farm, gank post-6.'],['Elise','Gank plus vite : farm et scale.']],
+k:['R = dash long + knock-back : escape ou engage.','E en dragon = zone de brûlure % PV : sur le groupe.'],
+v:'Bonne contre les jungler farmers · Difficile contre les invades et les CC'},
+
+Singed:{r:['TOP'],t:'Tank proxy / poison',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (poison en marchant) → W (colle, ground) → E (lance derrière, stun contre un mur). R : stats + vitesse. Proxy : Q entre les 2 tours ennemies. Fuite : Q + Ghost, E l\'ennemi qui te suit.',
+b:'Rylai → Liandry / Riftmaker → Zhonya / Spirit Visage · Bottes plaquées / Swiftness · Phase Rush ou Conquérant',
+p:'Lvl 1–5 : proxy quand c\'est safe (jungler vu ailleurs), sinon farm sous tour. Ne trade pas de face. Post-6 : R + Q + Ghost = tu fais 3 waves et tu fuis. Mid game : split push et force 2 ennemis à venir.',
+m:[['Teemo','Il te poke : proxy, ne fight pas.'],['Kled','Il te rattrape : W ground, E sur mur.'],['Jax','Il te chasse : W, Ghost, fuis.']],
+k:['E contre un mur = stun : lance-le quand l\'ennemi est près du terrain.','W ground annule les dashes : Yasuo, Lee Sin.'],
+v:'Bon contre les lanes lentes et les mêlées · Difficile contre le poke et les tanks'},
+
+Sion:{r:['TOP'],t:'Tank engage',s:['Niveau 6','2 objets','Late game'],
+c:'Q (charge : hold pour knock-up + plus de dégâts) → E (knock-back, projette un sbire) → W (bouclier, recast = dégâts % PV, stacks de PV sur kill) → R : charge inarrêtable (stun selon la distance). Combo : R → Q → E → W. Passif : zombie après la mort.',
+b:'Heartsteel → Sunfire / Thornmail → Jak\'Sho / Kaenic · Bottes plaquées / Mercury · Grasp',
+p:'Lvl 1–5 : W sur les sbires pour les stacks de PV, farm, Q chargé sur l\'ennemi immobile. Post-6 : R depuis loin sur les fights bot, ou pour split. Late : tu es une montagne de PV, R engage sur 3.',
+m:[['Vayne','% PV : joue le map, R en fight.'],['Fiora','Vitals : farm, ne fight pas.'],['Kayle','Elle scale : tue-la tôt avec Q E.']],
+k:['E sur un sbire le projette et slow ceux derrière.','R longue distance = stun plus long : recule avant.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le % PV'},
+
+Sivir:{r:['ADC'],t:'ADC waveclear / teamfight',s:['1er objet','2 objets','Niveau 6'],
+c:'Q (boomerang : aller-retour) → W (ricochets : 3 AA rebondissent) → AA. E (bouclier de sort : annule un sort, rend du mana). R : vitesse pour l\'équipe (engage / disengage). Poke : Q sur l\'ennemi qui last-hit.',
+b:'Kraken / Navori → Infinity Edge → Lord Dominik / Bloodthirster · Berserker · Fleet ou Précision',
+p:'Lane : push avec Q + W, prends les plaques. E sur le grab / le CC clé. Tu gagnes les waves, pas les trades. Post-6 : R = engage pour ton équipe ou fuite. Mid game : split push (waveclear) et R pour rejoindre.',
+m:[['Draven','Il te tue en duel : push, E sur son E.'],['Caitlyn','Portée : E sur le piège, push.'],['Lucian','All-in lvl 2 : E son Q, recule.']],
+k:['E annule TOUT sort : Blitz Q, Morgana Q, Malzahar R.','Q + W sur une wave = push instantané.'],
+v:'Bonne contre les engages à sort unique · Difficile contre les compos qui la poke hors de portée'},
+
+Skarner:{r:['JUNGLE','TOP'],t:'Tank engage cristal',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (arrache un rocher : 3 coups, le dernier = lancer, slow) → E (charge, traverse les murs, stun contre un mur) → W (zone, bouclier, slow) → R : empale jusqu\'à 3 ennemis et les déplace. Combo : E → Q → W → R.',
+b:'Sunfire / Heartsteel → Thornmail / Jak\'Sho → Kaenic / Frozen Heart · Mercury / plaquées · Aftershock ou Conquérant',
+p:'Full clear (Q AoE), gank lvl 3 : E à travers un mur → stun sur mur. Post-6 : R sur 3 = tu les amènes à ton équipe. Objectifs : tu tank tout. Late : engage sur 2 carries et ramène-les.',
+m:[['Lillia','Elle te kite : gank tôt.'],['Nunu','Il te vole : commence côté opposé.'],['Kindred','Kite : objectifs et ganks.']],
+k:['E traverse le terrain : chemins de gank impossibles pour les autres.','R déplace 3 ennemis pendant 1,75 s : vers ta tour.'],
+v:'Bon contre les compos groupées · Difficile contre le % PV et le kite'},
+
+Smolder:{r:['ADC','MID'],t:'ADC scaling stacks',s:['2 objets','Niveau 11','Late game'],
+c:'Q (stack sur kill, dégâts croissants : 25 = rebond, 125 = exécute, 225 = brûlure) → W (souffle, slow, explose) → E (vol : tir en volant, traverse les murs). R : souffle massif en ligne (soins pour toi dans la zone). Combo : W → Q → E.',
+b:'Essence Reaver ou Trinity → Infinity Edge / Navori → Lord Dominik · Berserker / Ionian · Fleet ou Précision',
+p:'Lvl 1–5 : farm au Q (chaque last-hit = stack), ne trade pas. À 125 stacks = tu exécutes. Late : Q longue portée + brûlure = tu gagnes les fights à distance. E pour fuir à travers les murs.',
+m:[['Draven','Il te tue early : farm sous tour.'],['Caitlyn','Portée : évite les pièges, Q sur les sbires.'],['Lucian','All-in lvl 2 : E de fuite.']],
+k:['Chaque kill de sbire = 1 stack : ne rate aucun CS.','R soigne si tu es dans le souffle : lance-le sur toi en fuite.'],
+v:'Bon contre les compos qui laissent scale · Difficile contre les lanes agressives'},
+
+Sona:{r:['SUPPORT'],t:'Enchanteresse scaling',s:['1er objet','2 objets','Niveau 6'],
+c:'Q (dégâts sur 2 cibles, AA renforcée alliée) → W (soins + bouclier, AA = réduit les dégâts) → E (vitesse, AA = slow). R : stun de zone en ligne. Passif : après 3 sorts, ton AA est renforcé. Combo : Q → AA → E → W. Engage : Flash + R.',
+b:'Objet support → Moonstone / Ardent Censer → Redemption / Shurelya · Ionian · Aery ou Guardian',
+p:'Lane : poke Q + AA passif, W quand l\'ADC trade. Tu es fragile : reste derrière. Post-6 : Flash + R sur 3 = fight gagné. Mid game : E pour la vitesse de groupe, W en continu.',
+m:[['Leona','Q sur elle quand elle E, puis recule.'],['Blitzcrank','Reste derrière, W soigne l\'allié grabé.'],['Pyke','Il te tue : reste près de l\'ADC, R quand il E.']],
+k:['Chaque sort réduit les CD des autres (passif accélération) : alterne.','R aussi en défense : stun le dive.'],
+v:'Bonne avec des ADC qui scale · Difficile contre les engages sur elle'},
+
+Soraka:{r:['SUPPORT'],t:'Enchanteresse soins',s:['1er objet','2 objets','Niveau 6'],
+c:'Q (dégâts + slow, te soigne si touche un champion → réduit le coût de W) → W (soin, coûte des PV) → E (silence + root de zone après 1,5 s) → R : soins globaux. Peel : E sur l\'engage → W sur l\'ADC.',
+b:'Objet support → Moonstone / Redemption → Ardent Censer / Shurelya · Ionian · Aery ou Guardian',
+p:'Lane : Q sur l\'ennemi qui last-hit (soins), W seulement après un Q touché. E sur le dive. Post-6 : R sur les alliés loin en danger (regarde la carte). Mid game : soigne derrière, E silence sur les canalisations (Katarina, Malzahar).',
+m:[['Leona','E silence quand elle E : elle ne peut pas Q.'],['Blitzcrank','Reste derrière, W soigne l\'allié grabé.'],['Zyra','Poke : hors de portée, W.']],
+k:['E silence coupe Katarina R, Fiddlesticks R, Nunu R.','R global : regarde la carte en permanence.'],
+v:'Bonne contre les compos poke / burst faible · Difficile contre les engages sur elle et l\'anti-soin'},
+
+Swain:{r:['SUPPORT','MID','TOP'],t:'Mage drain teamfight',s:['Niveau 6','1er objet','2 objets'],
+c:'E (lance : slow, revient = root) → W (zone longue portée, révèle) → Q (cône, dégâts multiples). R : drain de zone, recast = explosion (démon). Passif : ramasse les âmes (PV max). Combo : E → W → Q → R.',
+b:'Liandry / Rod of Ages → Rylai / Riftmaker → Zhonya / Rabadon · Bottes du sorcier / Mercury · Conquérant ou Aery',
+p:'Support : E sur l\'ennemi avancé, W longue portée depuis le bush. Mid : farm au Q, E → W quand l\'ennemi est rooté. Post-6 : R au milieu du fight = drain de 3 cibles, tu tank tout, Zhonya pendant R.',
+m:[['Leona','E sur elle quand elle E : root.'],['Zed','Zhonya. R quand il R : il draine.'],['Fizz','Il esquive E : E après son saut.']],
+k:['E qui revient = root : lance-le derrière l\'ennemi.','R + Zhonya = drain pendant la stase.'],
+v:'Bon contre les compos groupées et les mêlées · Difficile contre le poke longue portée'},
+
+Sylas:{r:['MID','JUNGLE','TOP'],t:'Bruiser AP vol de R',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (chaînes : slow, 2e explosion) → E1 (dash) → E2 (chaîne : attire) → W (dégâts + soins). Passif : après un sort, 2 AA renforcées. R : vole le R adverse. Combo : E → Q → AA → W → E2 → AA. Vole un R d\'engage (Malphite, Amumu).',
+b:'Hextech Gunblade / Lich Bane → Zhonya / Shadowflame → Rabadon / Cosmic Drive · Ionian / sorcier · Conquérant',
+p:'Lvl 3 : trade E → Q → AA → W, tu gagnes. Post-6 : vole le R le plus utile (pas le plus fort : le plus utile). Jungle : full clear (W soins), gank E → Q. Mid game : side ou fights, R volé décide.',
+m:[['Galio','Il te taunt dans ton E : trade court, ne E2 pas sur lui.'],['Malzahar','Bouclier passif : Q pour casser, son R volé est ton meilleur pick.'],['Kassadin','Vole son R = tu blink : tue-le pré-11.']],
+k:['Vole Malphite / Amumu / Ornn R = tu deviens l\'engage.','E1 sans E2 = dash de fuite.'],
+v:'Bon contre les compos avec des R forts · Difficile contre les tanks CC'},
+
+Syndra:{r:['MID'],t:'Mage burst',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (sphère) → E (projette les sphères : stun) → W (prend une sphère / un sbire, lance : slow) → R (toutes les sphères sur la cible = burst). Combo : Q → E (stun) → W → Q → R. Passif : les sphères donnent des stacks (E plus large, R plus fort).',
+b:'Luden\'s Echo → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Électrocution ou First Strike',
+p:'Lane : poke Q, Q → E stun quand l\'ennemi avance, farm au W. Post-6 : R = kill sur les squishies avec 4+ sphères. Place les sphères avant de trade. Push et roam avec R up.',
+m:[['Zed','Zhonya. Q E stun quand il apparaît.'],['Yasuo','Mur bloque Q E : E quand W est en CD.'],['Fizz','Il esquive : E après son saut.']],
+k:['E sur 3 sphères = stun en éventail.','R : 3 sphères de base + celles au sol : prépare-en 3 avant.'],
+v:'Bonne contre les mages immobiles et les mêlées · Difficile contre les assassins mobiles'},
+});
+
+/* fiches T → Z */
+Object.assign(FICHES_DEFAULT, {
+TahmKench:{r:['SUPPORT','TOP'],t:'Tank protection / engage',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (langue : slow, stun à 3 stacks passif) → AA (stacks) → W (plonge, saute : knock-up) → E (PV gris → bouclier). R : avale un allié (le protège) ou un ennemi à 3 stacks (dégâts). Combo : AA AA Q (stun) → W → R. Peel : R sur l\'ADC en danger.',
+b:'Objet support → Locket / Knight\'s Vow → Thornmail / Kaenic (top : Heartsteel → Sunfire) · Bottes plaquées / Mercury · Grasp ou Aftershock',
+p:'Lane : stack 3 AA sur l\'ADC adverse puis Q = stun, E pour tank. R sur ton ADC quand il se fait engage. Top : trade Q + AA, tank. Mid game : R avale le carry adverse (3 stacks) ou sauve le tien.',
+m:[['Morgana','Bouclier noir : stun annulé, engage après.'],['Janna','Elle te repousse en W : W quand sa Q est en CD.'],['Vayne','Top : kite, E gris, farm.']],
+k:['E = PV gris : active-le avant que ça expire pour un bouclier.','R sur un allié = il ne prend rien pendant que tu marches.'],
+v:'Bon avec un ADC qui se fait dive · Difficile contre le poke'},
+
+Taliyah:{r:['JUNGLE','MID'],t:'Mage contrôle / mobilité',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (5 projectiles, 1 seul sur terrain travaillé : 2× dégâts) → W (projette dans une direction) → E (champ de pierres : dégâts + stun quand l\'ennemi le traverse en dash / est projeté). R : mur long, traverse la carte. Combo : E → W (projette sur E) → Q.',
+b:'Luden\'s Echo / Liandry → Shadowflame → Rabadon / Zhonya · Ionian / sorcier · Électrocution ou Comète',
+p:'Jungle : clear rapide (Q AoE), gank lvl 3 : E derrière l\'ennemi → W vers E = stun. Post-6 : R pour couper une fuite ou bloquer un gank. Mid : farm au Q, W E stun sur le dasher.',
+m:[['Nunu','Il te vole : commence côté opposé.'],['LeeSin','Il te bat en duel : gank plus vite.'],['Yasuo','Mid : mur bloque Q, W E stun sur son dash.']],
+k:['Terrain travaillé (Q déjà lancé) : Q suivant = 1 projectile puissant.','R bloque aussi les alliés : préviens.'],
+v:'Bonne contre les dashers (E) · Difficile contre les tanks'},
+
+Talon:{r:['MID','JUNGLE'],t:'Assassin roam',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (lame, revient : slow + saignement) → Q (saut si à distance, crit si au contact) → AA (passif : 3 coups = saignement) → R (invisible, lames en cercle 2×). Combo : W → Q → AA → R → AA. E : saute n\'importe quel mur (CD par mur).',
+b:'Youmuu / Eclipse → Edge of Night / Opportunity → Serylda / Black Cleaver · Ionian / plaquées · Électrocution ou Conquérant',
+p:'Lvl 2 : W → Q → AA = trade gagnant sur les mages. Lvl 3+ : roam bot via les murs (E), reviens avant de perdre la wave. Post-6 : R pour rentrer / sortir invisible. Tu es un roamer : 3 kills bot avant 10 min = game.',
+m:[['Galio','Il annule ton burst : farm, roam.'],['Malzahar','Bouclier passif : W pour casser, roam.'],['Lissandra','CC en chaîne : roam plutôt que trade.']],
+k:['E sur un mur = CD long sur ce mur : varie les chemins.','Passif saignement à 3 coups : W + Q + AA = déclenché.'],
+v:'Bon contre les mages immobiles · Difficile contre les tanks CC et les boucliers'},
+
+Taric:{r:['SUPPORT'],t:'Tank protection / anti-dive',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : après un sort, 2 AA renforcées (réduisent les CD). Q (soins, stacks) → AA → E (stun en ligne après 1 s, aussi via l\'allié lié W) → AA → W (bouclier + lien). R : invulnérabilité de zone après 2,5 s. Combo : W → E → AA AA → Q.',
+b:'Objet support → Locket / Knight\'s Vow → Redemption / Thornmail · Bottes plaquées / Mercury · Aftershock ou Guardian',
+p:'Lane : W sur l\'ADC, E via lui (double stun), Q pour soigner. Mid game : R avant un engage adverse (Malphite R, Amumu R) = ton équipe ne prend rien. Avec Yi / Kayn : lié = W, R pour le dive.',
+m:[['Morgana','Bouclier noir bloque E : E après.'],['Janna','Elle disengage : E via l\'allié.'],['Zyra','Poke : hors portée, Q.']],
+k:['E part de toi ET de l\'allié lié : 2 angles de stun.','R : 2,5 s de délai — lance-le quand tu vois l\'engage arriver.'],
+v:'Bon contre les compos burst / engage · Difficile contre le poke'},
+
+Teemo:{r:['TOP','SUPPORT','JUNGLE'],t:'Ranged bully / champignons',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (aveugle : les AA ratent) → AA (E : poison) → W (vitesse). R : champignons (invisible, slow + poison) : posés dans les bushes, sur les chemins, sur les objectifs. Passif : invisible immobile (camouflage). Trade : Q → AA AA → recule.',
+b:'Nashor\'s Tooth → Liandry → Rabadon / Zhonya · Bottes du sorcier / Swiftness · Précision (PTA) ou Aery',
+p:'Lvl 1–5 : AA à chaque last-hit ennemi, Q quand il trade. Tu domines les mêlées AA. Post-6 : champignons sur les chemins de gank, la rivière, les bushes. Mid game : side lane avec champignons = 1v1 gagné, wards gratuites.',
+m:[['Malphite','Il tank : farm, poke Q.'],['Pantheon','Il bloque tes AA avec E et te saute : Q quand il W, recule.'],['Irelia','Elle dash : Q quand elle Q, ne push pas seul.']],
+k:['Q aveugle Tryndamere, Yi, Jax : lance-le quand ils commencent leurs AA.','Champignons = vision : 3 sur les objectifs 60 s avant.'],
+v:'Bon contre les mêlées AA · Difficile contre les mages et les tanks CC'},
+
+Thresh:{r:['SUPPORT'],t:'Engage / utilitaire',s:['Niveau 2','Niveau 6','1er objet'],
+c:'Q (crochet : recast = tu vas sur la cible) → E (fauche : pousse ou tire, slow) → W (lanterne : bouclier + allié te rejoint) → R (mur : slow massif). Combo : Q → E (tire vers toi) → R. Passif : ramasse les âmes (armure + AP). Flash + E pour un pick.',
+b:'Objet support → Locket / Knight\'s Vow → Zeke\'s / Redemption · Bottes plaquées / Mobility · Aftershock ou Guardian',
+p:'Lane : Q quand l\'ennemi AA (immobile), E pour repousser l\'engage adverse. Ramasse les âmes. Lanterne pour ton jungler qui gank. Post-6 : Q → E → R sur le carry en fight ; W sur l\'allié qui dive.',
+m:[['Morgana','Bouclier noir : Q après.'],['Sivir','Bouclier de sort : feint puis Q.'],['Leona','Elle engage à travers : E pour la repousser, W sur l\'ADC.']],
+k:['E = knock-back qui interrompt les dashes (Vi Q, Lee Sin R).','Lanterne = mobilité : ton jungler arrive de nulle part.'],
+v:'Bon contre les ADC immobiles · Difficile contre les enchanteurs disengage'},
+
+Tristana:{r:['ADC','MID'],t:'ADC burst / dive',s:['Niveau 2','2 objets','3 objets'],
+c:'E (charge sur la cible : explose après 4 AA ou 4 s) → AA AA AA AA → Q (AS) → R (knock-back, dégâts). W (saut, reset sur kill / explosion E). Combo : E → Q → AA → W → AA → R. Passif : portée avec le niveau.',
+b:'Kraken / Yun Tal → Infinity Edge → Lord Dominik / Rapid Firecannon · Berserker · Précision (PTA) ou Tempo Létal',
+p:'Lvl 2 : E → W → Q all-in avec support engage. E sur une tour = plaques. Ta portée grandit : tu deviens un carry late. Mid game : dive avec W puis reset, R en défense sur l\'assassin.',
+m:[['Caitlyn','Portée early : farm, E sur elle quand elle avance, all-in lvl 2 ou 6.'],['Draven','Il gagne les AA : E → Q → W, ne trade pas sans support.'],['Ashe','Elle te ralentit : W après son W.']],
+k:['W reset sur kill = poursuite ; garde-le pour finir ou fuir.','R repousse l\'engage : Zed, Kha\'Zix, Rengar.'],
+v:'Bonne contre les lanes lentes et les assassins (R) · Difficile contre le poke longue portée'},
+
+Trundle:{r:['JUNGLE','TOP'],t:'Bruiser anti-tank',s:['Niveau 3','1er objet','2 objets'],
+c:'W (zone : AS + vitesse + soins) → Q (AA renforcée : slow, vole de l\'AD) → E (pilier : bloque, slow). R : vole les PV, armure et RM du tank ennemi. Combo : W → E derrière l\'ennemi → Q → AA → R sur le tank.',
+b:'Trinity Force / Sundered Sky → Sterak → Spirit Visage / Death\'s Dance · Bottes plaquées · Conquérant ou Grasp',
+p:'Jungle : clear avec W, gank lvl 3 avec E derrière la cible (bloque la fuite). Top : trade Q + W, E pour bloquer. Post-6 : R sur le tank adverse = tu deviens le tank et lui le carton. Objectifs : tu duel tout le monde.',
+m:[['Kindred','Elle te kite : gank et objectifs.'],['Lillia','Idem : gank tôt.'],['Nunu','Il te vole : commence côté opposé.']],
+k:['E pilier bloque un chemin étroit : jungle, rivière, sous tour.','R sur le tank en teamfight = ton frontline devient le leur.'],
+v:'Bon contre les tanks et les mêlées · Difficile contre le kite'},
+
+Tryndamere:{r:['TOP'],t:'Duelist split push',s:['Niveau 6','1er objet','2 objets'],
+c:'E (spin) → AA (fureur = crit %) → W (slow si l\'ennemi te tourne le dos) → Q (soins selon la fureur). R : 5 s sans mourir. Combo : E → AA → W → AA → R quand bas → Q à la fin de R. Passif : fureur = crit.',
+b:'Berserker → Kraken / Trinity → Infinity Edge → Phantom Dancer / Bloodthirster · Berserker · Tempo Létal ou Précision',
+p:'Lvl 1–5 : trade E → AA avec fureur, Q pour soigner et rester en lane. Post-6 : all-in R : tu ne peux pas mourir 5 s. Side push : tu prends les tours seul, E pour fuir par-dessus les murs. TP pour rejoindre.',
+m:[['Teemo','Aveugle : Q quand il Q, farm.'],['Malphite','Il t\'AS-negate : side push, joue le map.'],['Jax','Contre-frappe : E loin, ne trade pas sous E.']],
+k:['R = 5 s sans pouvoir mourir, mais tu restes CC-able : lance Q à la fin de R pour les soins.','E par-dessus un mur = escape après le split.'],
+v:'Bon contre les mêlées sans CC · Difficile contre les CC en chaîne et l\'aveuglement'},
+
+TwistedFate:{r:['MID'],t:'Mage pick global',s:['Niveau 6','1er objet','2 objets'],
+c:'W (carte : or = stun, bleue = mana, rouge = AoE slow) → AA → Q (3 cartes). R : révèle la carte + TP à distance. Combo gank : R → carte or → AA → Q. Farm : carte rouge + Q.',
+b:'Rapid Firecannon ou Lich Bane → Rabadon / Shadowflame → Zhonya (AD : Kraken → Navori) · Bottes du sorcier / Berserker · Aery ou Précision',
+p:'Lvl 1–5 : farm, carte bleue pour le mana, or sur l\'ennemi qui approche. Post-6 : push puis R sur bot / top = kill à chaque R. Ping avant chaque R. Mid game : side push, R pour rejoindre. Tu es faible en 1v1 : joue le map.',
+m:[['Zed','Zhonya. Carte or quand il R.'],['Fizz','Il esquive : carte or après son saut.'],['Talon','Il roam : R pour contre-roam.']],
+k:['Prépare la carte or avant R : tu arrives avec le stun.','R révèle la carte 6 s : scout les objectifs.'],
+v:'Bon contre les lanes bot faibles (roam) · Difficile contre les assassins'},
+
+Twitch:{r:['ADC','JUNGLE'],t:'Hyper-carry furtif',s:['Niveau 6','2 objets','3 objets'],
+c:'Q (camouflage, AS à la sortie) → AA (E : poison stacks) → E (explose selon les stacks). W (flaque : slow, poison). R : portée + tirs perçants. Combo : Q → approche → R → AA AA AA → E. Jungle : Q + E sur les camps.',
+b:'Kraken / Yun Tal → Runaan / Infinity Edge → Lord Dominik / Bloodthirster · Berserker · Tempo Létal ou Précision',
+p:'Lane : farm, E poke après 4 AA, tu es faible. Post-6 : Q pour arriver caché sur un fight = R sur 3 alignés. Jungle : clear lent, gank avec Q invisible dès lvl 3 (Q + Ignite = kill). Late : R derrière ton frontline = ACE.',
+m:[['Draven','Il te tue early : farm, ne trade pas.'],['Caitlyn','Portée : évite les pièges, poke E.'],['Lucian','All-in lvl 2 : W slow, recule.']],
+k:['Q invisible = les pinks te révèlent : passe par la rivière avec sweeper.','R traverse tout : place-toi en ligne avec 3 ennemis.'],
+v:'Bon contre les compos groupées sans pinks · Difficile contre les assassins et la vision'},
+
+Udyr:{r:['JUNGLE','TOP'],t:'Bruiser postures',s:['Niveau 3','1er objet','2 objets'],
+c:'4 postures : Q (AS, 2 AA renforcées) / W (bouclier + soins) / E (vitesse, stun au contact) / R (aura, dégâts). Réactiver une posture = version éveillée (plus forte). Gank : E → stun → Q / R éveillé. Duel : W éveillé = soins massifs.',
+b:'Sundered Sky / Trinity (Q) ou Sunfire / Heartsteel (R tank) → Sterak / Jak\'Sho → Death\'s Dance / Thornmail · Bottes plaquées · Conquérant ou Phase Rush',
+p:'Full clear rapide (R aura), gank lvl 3 avec E stun. Tu es fort tôt : invade, duel, objectifs. Mid game : E stun sur le carry, W éveillé pour survivre, R éveillé sur le groupe.',
+m:[['Kindred','Elle te kite : gank, objectifs.'],['Lillia','Idem, gank tôt.'],['Rammus','Il te contre en Q : joue R tank.']],
+k:['Une seule posture éveillée à la fois (CD partagé) : choisis-la.','E stun 1 fois par cible toutes les 6 s : change de cible.'],
+v:'Bon contre les carries et les jungler lents · Difficile contre le kite et les tanks'},
+
+Urgot:{r:['TOP'],t:'Juggernaut AA',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : chaque AA tire une jambe (6 jambes en rotation, dégâts AD). Q (slow) → AA → W (tirs rapides, toggle) → E (charge, projette la cible derrière toi) → R : exécute sous 25 %, peur de zone. Combo : Q → E → W → AA → R.',
+b:'Black Cleaver → Sterak → Death\'s Dance / Titanic · Bottes plaquées / Mercury · Précision (PTA) ou Conquérant',
+p:'Lvl 1–5 : AA à distance sur l\'ennemi qui last-hit (passif), W pour push. Post-6 : E → W → R exécute. Side lane : tu gagnes les 1v1 contre les mêlées. R sur le carry sous 25 % = peur pour toute leur équipe.',
+m:[['Vayne','Kite : joue le map.'],['Malphite','Tank : farm, poke passif.'],['Kayle','Elle scale : tue-la pré-6.']],
+k:['E projette la cible derrière toi : vers ta tour ou ton jungler.','R exécute sous 25 % : regarde la barre, lance à 30 % s\'il saigne.'],
+v:'Bon contre les mêlées et les mages · Difficile contre le kite'},
+
+Varus:{r:['ADC','MID'],t:'ADC poke / on-hit',s:['Niveau 6','2 objets','3 objets'],
+c:'Poke : Q (chargé, longue portée) sur cible avec stacks W (3 AA) = dégâts % PV. E (zone : slow + anti-soin). R : root en chaîne (les cibles voisines sont touchées). Combo : AA AA AA → Q ou E (consomme les stacks) → R.',
+b:'Lethality : Youmuu → Collector. On-hit : Kraken → Guinsoo → Terminus. AP : Nashor → Rabadon · Berserker / Ionian · Précision (PTA) ou Comète',
+p:'Lane : poke Q à distance, 3 AA puis Q. E sur l\'engage. Post-6 : R = engage pour ton support ou peel. Mid game : poke avant les objectifs, R sur le tank qui approche.',
+m:[['Draven','Il gagne les AA : poke Q, jamais de trade AA.'],['Lucian','All-in lvl 2 : E slow, R quand il E.'],['Caitlyn','Portée : poke Q, E sur ses pièges.']],
+k:['Q chargé = portée énorme : poke les objectifs.','R sur une cible = les alliés proches sont rootés aussi.'],
+v:'Bon contre les lanes lentes et les compos groupées · Difficile contre les assassins'},
+
+Vayne:{r:['ADC','TOP'],t:'Hyper-carry % PV',s:['2 objets','3 objets','Late game'],
+c:'Q (tumble, AA renforcée) → AA → AA (W : 3 coups = vrais dégâts % PV max) → E (condamne : stun contre un mur). R : AD + Q invisible + vitesse. Combo : Q → AA → E (mur) → AA → AA. Kite : AA → Q → AA.',
+b:'Blade of the Ruined King → Guinsoo → Terminus / Wit\'s End · Berserker · Précision (PTA) ou Tempo Létal',
+p:'Lvl 1–5 : farm, trade 3 AA (W) quand l\'ennemi est près d\'un mur (E). Tu es faible : joue les 2 objets. Post-11 avec Guinsoo : tu fonds les tanks. Late : R et Q invisible = repositionnement, tu gagnes tout fight où tu vis.',
+m:[['Draven','Il te tue early : farm, E sur mur quand il approche.'],['Caitlyn','Portée : ne poke pas, farm, joue 2 objets.'],['Lucian','All-in lvl 2 : E sur mur, Q de fuite.']],
+k:['E sur un mur = stun 1,5 s : joue près des murs.','W = vrais dégâts % PV : le tank est ta cible préférée.'],
+v:'Bonne contre les tanks · Difficile contre les assassins et les lanes agressives'},
+
+Veigar:{r:['MID','SUPPORT','ADC'],t:'Mage scaling stacks',s:['Niveau 6','2 objets','Late game'],
+c:'Q (2 cibles : stacks AP sur kill) → E (cage : stun au bord) → W (météore, délai) → R (exécute selon PV manquants). Combo : E → W → Q → R. Farm : Q sur 2 sbires bas = 2 stacks. Passif : les kills donnent des stacks.',
+b:'Rod of Ages / Luden\'s Echo → Rabadon → Zhonya / Void Staff · Bottes du sorcier · Électrocution ou Phase Rush',
+p:'Lvl 1–5 : stack Q sur les sbires (2 par Q). Farm, ne meurs pas. Post-6 : E cage sur l\'ennemi qui dash → W → R = kill. Late : R exécute tout le monde, E cage pour peel. Support : E → W, stacks sur les kills.',
+m:[['Zed','Zhonya. E quand il apparaît, W sur lui.'],['Fizz','Il esquive tout : E après son saut.'],['Talon','Il roam : ward, E quand il saute.']],
+k:['E cage : le bord stun, l\'intérieur non. Place-la sur l\'ennemi qui va bouger.','R fait plus mal sur cible basse : lance à 40 % PV.'],
+v:'Bon contre les compos qui laissent scale · Difficile contre les assassins'},
+
+Velkoz:{r:['SUPPORT','MID'],t:'Mage poke / vrais dégâts',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : 3 sorts / AA = vrais dégâts. Q (recast : split en 2, slow) → W (2 charges, ligne) → E (knock-up de zone) → R (rayon canalisé, vrais dégâts). Combo : E → Q → W → W → R.',
+b:'Luden\'s Echo / Liandry → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Comète ou Aery',
+p:'Support : poke W W + Q depuis le bush, E sur l\'ennemi qui engage. Mid : farm au W, poke Q split. Post-6 : E → R sur une cible immobile = kill. Zhonya pas pendant R : reste derrière ton tank.',
+m:[['Leona','E knock-up quand elle E.'],['Blitzcrank','Reste derrière, E quand il approche.'],['Pyke','E quand il E.']],
+k:['Q recast au bon moment = angle impossible.','R se coupe par CC : lance-le sur une cible déjà CC.'],
+v:'Bon contre les tanks (vrais dégâts) · Difficile contre les assassins'},
+
+Vex:{r:['MID'],t:'Mage anti-dash / burst',s:['Niveau 6','1er objet','2 objets'],
+c:'Passif : périodiquement, ton prochain sort fait peur ; les dashes ennemis proches réactivent le passif. Q (missile, accélère) → E (zone, marque « gloom ») → W (bouclier + zone). R (saut sur la cible marquée, reset sur kill). Combo : E → Q → W → R.',
+b:'Luden\'s Echo → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Électrocution',
+p:'Lane : poke E → Q, W quand on te saute dessus (peur si passif). Tu contre les dashers. Post-6 : R sur un carry bas = reset. Mid game : peur de zone sur les engages, R pour finir.',
+m:[['Kassadin','Il scale, mais ses R activent ta peur : tue-le pré-11.'],['Galio','Il annule ton burst : farm, roam.'],['Malzahar','Bouclier passif : Q pour casser.']],
+k:['Chaque dash ennemi près de toi réarme ta peur : Yasuo, Irelia, Lee Sin.','R recast dans les 2,5 s = saut sur la cible.'],
+v:'Bonne contre les dashers · Difficile contre les mages poke à portée'},
+
+Vi:{r:['JUNGLE'],t:'Bruiser engage ciblé',s:['Niveau 3','Niveau 6','1er objet'],
+c:'Q (charge : hold = plus loin, knock-back) → AA → E (3e coup : AoE, 2 charges) → W (passif : 3 AA = armure réduite + AS). R : dash inarrêtable sur la cible, knock-up. Combo : Q → E → AA → E → R.',
+b:'Eclipse / Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Full clear (E sur les camps), gank lvl 3 : Q depuis loin = knock-back garanti. Post-6 : R sur le carry adverse (inarrêtable) = fight gagné pour ton mid. Objectifs : Q pour voler, E pour finir.',
+m:[['Nunu','Il te vole : commence côté opposé.'],['Kindred','Elle te kite : R sur elle.'],['Rammus','Il te contre : joue R sur son carry.']],
+k:['Q hold = plus loin et plus de dégâts : charge-la derrière un mur.','R rend inarrêtable : traverse les CC pour atteindre le carry.'],
+v:'Bonne contre les carries sans escape · Difficile contre les tanks et les disengage'},
+
+Viego:{r:['JUNGLE'],t:'Assassin possession',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (coup, passif : AA après = 2e coup + soins) → W (charge : stun) → E (bush brumeux : vitesse + camouflage) → AA. R : dash + exécute selon PV manquants. Passif : tuer un champion = tu le possèdes (ses sorts, reset des tiens). Combo : E → W → Q → AA → R.',
+b:'Kraken / Sundered Sky → Blade of the Ruined King / Black Cleaver → Death\'s Dance / Sterak · Berserker / plaquées · Conquérant',
+p:'Full clear (Q soins), gank lvl 3 via E (camouflage) → W stun. Post-6 : R exécute. Teamfight : le 1er kill = tu deviens la cible (ses sorts) et tu enchaînes. Objectifs : tu les fais bien avec Q.',
+m:[['Nunu','Il te vole : commence côté opposé.'],['Rammus','Il te contre : joue R sur son carry.'],['Lillia','Elle te kite : gank tôt.']],
+k:['Possession : utilise le R volé (Malphite, Amumu) avant de revenir.','W : charge courte = stun court ; garde-le pour interrompre.'],
+v:'Bon contre les compos groupées avec des carries · Difficile contre les tanks CC'},
+
+Viktor:{r:['MID'],t:'Mage contrôle / scaling',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Q (bouclier, AA renforcée) → E (rayon : lance à distance, explosion si évolué) → W (zone : slow, stun après 1,5 s dedans) → R (tempête : suit une cible, interrompt les canalisations). Combo : E → W → Q → AA → R. Évolutions par stacks (passif) : Q, W, E, R.',
+b:'Luden\'s Echo → Rabadon / Shadowflame → Zhonya / Void Staff · Bottes du sorcier / Ionian · Aery ou Conquérant',
+p:'Lvl 1–5 : farm au E (à distance), poke E sur l\'ennemi qui last-hit. Évolue E d\'abord. Post-6 : W → R sur le carry. Late : E évolué = waveclear + poke, R suit la cible. Reste à portée max.',
+m:[['Zed','Zhonya. Q bouclier quand il R, W sur toi.'],['Yasuo','Mur bloque E : E par le côté, W sur son dash.'],['Fizz','Il esquive E : W après son saut.']],
+k:['E se lance depuis un point à distance : angle impossible.','R interrompt les canalisations (Katarina, Fiddle).'],
+v:'Bon contre les mages immobiles et les lanes lentes · Difficile contre les assassins mobiles'},
+
+Vladimir:{r:['MID','TOP'],t:'Mage drain scaling',s:['Niveau 6','2 objets','Niveau 11'],
+c:'Q (drain, 3e Q renforcé = soins massifs : « rage ») → E (chargé : AoE, coûte des PV) → W (flaque : intouchable, slow). R : marque de zone (+10 % dégâts), explosion. Combo : R → E chargé → Q → Q → W → Q rage.',
+b:'Riftmaker / Rod of Ages → Cosmic Drive / Rabadon → Zhonya / Void Staff · Bottes du sorcier / Ionian · Phase Rush ou Conquérant',
+p:'Lvl 1–5 : farm au Q, tu es faible. Trade Q quand la rage est prête. W = ton escape. Post-6 : all-in R → E → Q rage. Late : R sur 3+ en teamfight = fight gagné, tu es intuable.',
+m:[['Zed','W quand il R (intouchable), Zhonya.'],['Kassadin','Il te bat post-11 : tue-le tôt.'],['Fizz','Il esquive : W après son saut.']],
+k:['W te rend intouchable 2 s : esquive n\'importe quel R.','Q rage (barre rouge) = soins massifs : garde-la pour le trade.'],
+v:'Bon contre les mages immobiles et les tanks (late) · Difficile contre les assassins early'},
+
+Volibear:{r:['JUNGLE','TOP'],t:'Bruiser engage tour-dive',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (vitesse, stun sur AA) → W (morsure : marque, 2e = soins + plus de dégâts) → E (éclair : zone, bouclier) → R : saut, désactive la tour, PV bonus. Combo : Q → AA (stun) → W → E → AA → W. Passif : AS → éclair AoE.',
+b:'Sundered Sky / Trinity → Sterak / Jak\'Sho → Spirit Visage / Death\'s Dance · Bottes plaquées / Mercury · Conquérant ou Grasp',
+p:'Full clear (passif AoE), gank lvl 3 avec Q stun. Post-6 : R dive sous tour = la tour est désactivée, ton laner suit. Objectifs : tu duel bien. Top : trade Q → AA → W, tank.',
+m:[['Kindred','Elle te kite : gank, objectifs.'],['Lillia','Idem, gank tôt.'],['Rammus','Il te contre : joue les dives loin de lui.']],
+k:['R désactive la tour 3 s : dive avec ton laner.','W recast sur la cible marquée = soins : marque puis frappe.'],
+v:'Bon contre les carries sous tour · Difficile contre le kite et les tanks'},
+
+Warwick:{r:['JUNGLE','TOP'],t:'Bruiser chasse / soins',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (morsure : soins, suit la cible si hold) → E (réduction de dégâts, recast = peur) → W (vitesse vers les ennemis bas, sens le sang). R : saut suppress (portée selon vitesse), soins. Combo : W → R → Q → E → AA.',
+b:'Blade of the Ruined King / Sundered Sky → Sterak / Titanic → Spirit Visage / Thornmail · Bottes plaquées · Conquérant ou Précision',
+p:'Full clear (Q soins), gank lvl 3 les lanes basses (W). Post-6 : R depuis loin sur un ennemi sous 50 % = kill. Tu es fort tôt : invade, duel les jungler bas, objectifs. E avant de prendre le burst.',
+m:[['Kindred','Elle te kite : gank, objectifs.'],['Lillia','Idem.'],['Vayne','Top : kite, W pour la suivre, R.']],
+k:['E recast = peur de zone : interrompt les dashes.','R suppress : ton allié peut finir pendant.'],
+v:'Bon contre les carries bas de vie · Difficile contre les CC et l\'anti-soin'},
+
+Xayah:{r:['ADC'],t:'ADC plumes / root',s:['Niveau 2','2 objets','3 objets'],
+c:'Q (2 plumes) → AA (chaque AA laisse une plume : W = AS + plumes) → E (rappelle les plumes : root si 3 traversent). R : intouchable + plumes en éventail. Combo : Q → AA AA → E (root) → AA. Avec Rakan : R plus fort.',
+b:'Kraken / Yun Tal → Infinity Edge → Navori / Lord Dominik · Berserker · Tempo Létal ou Précision',
+p:'Lane : place des plumes (AA + Q) puis E = root sur l\'ennemi qui avance. Lvl 2 : Q → AA → E. Post-6 : R esquive l\'engage (Zed R, Malphite R) + root. Mid game : side lane avec Rakan, E pour peel.',
+m:[['Caitlyn','Portée : plumes sur la wave, E quand elle avance.'],['Draven','Il gagne les AA : E root quand il approche, ne trade pas sans plumes.'],['Lucian','All-in lvl 2 : E root sur son dash.']],
+k:['3 plumes qui traversent = root : compte-les.','R = intouchable 1,5 s : esquive tout.'],
+v:'Bonne contre les engages (R) · Difficile contre le poke à distance'},
+
+Xerath:{r:['MID','SUPPORT'],t:'Mage artillerie',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (chargé : longue portée) → W (zone : slow, centre = plus) → E (stun en ligne : plus long de loin). R : 4–5 tirs longue portée (canalisé). Combo : E → W → Q → R. Poke : Q chargé sur l\'ennemi qui last-hit.',
+b:'Luden\'s Echo → Shadowflame / Horizon Focus → Rabadon / Zhonya · Bottes du sorcier / Ionian · Comète ou Aery',
+p:'Lane : poke Q à portée max, W sur l\'ennemi qui recule, E sur le dasher. Farm au W. Post-6 : R sur les cibles bas partout sur la carte (regarde la minimap). Support : poke Q W, E sur l\'engage.',
+m:[['Zed','Zhonya. E quand il apparaît.'],['Fizz','Il esquive : E après son saut.'],['Talon','Il roam : ward, E quand il saute.']],
+k:['Q chargé = 1 450 de portée : poke sans risque.','R : chaque tir peut être annulé si tu bouges — reste immobile derrière ton équipe.'],
+v:'Bon contre les mêlées lents et les compos immobiles · Difficile contre les assassins et les dashers'},
+
+XinZhao:{r:['JUNGLE'],t:'Bruiser duel / engage',s:['Niveau 3','Niveau 6','1er objet'],
+c:'E (dash, slow) → Q (3 AA : le 3e knock-up) → W (coup : slow + AS) → AA. R : balaye les ennemis (sauf la cible marquée), tu ne prends plus de dégâts hors de la zone. Combo : E → Q → AA → AA → AA → W → R.',
+b:'Eclipse / Sundered Sky → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Full clear rapide (W AoE), gank lvl 3 : E → Q knock-up = kill. Post-6 : R pour isoler un carry (les autres sont projetés) ou pour survivre. Objectifs : tu duel bien tôt. Snowball, tu baisses en late.',
+m:[['Kindred','Elle te kite : R sur elle.'],['Nunu','Il te vole : commence côté opposé.'],['Rammus','Il te contre : joue R sur son carry.']],
+k:['R marque la dernière cible frappée : elle reste, les autres partent.','W passe à travers les sbires : slow le fuyard.'],
+v:'Bon contre les carries et les jungler lents · Difficile contre les tanks'},
+
+Yasuo:{r:['MID','TOP','ADC'],t:'Duelist wind',s:['Niveau 2','2 objets','3 objets'],
+c:'E (dash sur sbire/ennemi) → Q (3e Q = tornade, knock-up) → R (sur les airborne : dégâts, ignore l\'armure). Combo : E → Q (EQ) → E → E → Q3 → R. W (mur) bloque tous les projectiles. Passif : bouclier + crit doublé.',
+b:'Berserker → Immortal Shieldbow / Kraken → Infinity Edge → Bloodthirster / Death\'s Dance · Berserker · Tempo Létal ou Conquérant',
+p:'Lvl 1–3 : trade EQ sur les sbires, tornade sur l\'ennemi qui last-hit, W contre le poke. Post-6 : tornade → R = kill. 2 objets = 100 % crit, tu gagnes les 1v1. Teamfight : R sur 2+ airborne (Malphite, Alistar).',
+m:[['Malzahar','Silence + R : ne push pas post-6, QSS.'],['Renekton','Il te bat lvl 1–5 : farm, EQ seulement, R sur son W.'],['Annie','Ton W bloque sa Q (projectile) mais pas Tibbers : trade uniquement quand elle n\'a pas 4 stacks.']],
+k:['W bloque Ezreal R, Caitlyn R, Ashe R, Blitz Q : positionne-le entre toi et le tireur.','E enchaîné sur une wave entière = tu traverses la lane en un instant (EQ sur chaque sbire).'],
+v:'Bon avec des knock-up alliés · Difficile contre les tanks CC et les mages sans projectiles'},
+
+Yone:{r:['MID','TOP'],t:'Duelist esprit',s:['Niveau 3','2 objets','3 objets'],
+c:'Q (3e = tornade) → E (forme esprit : dash, dégâts stockés puis appliqués au retour) → W (cône : dégâts % PV + bouclier). R : dash + knock-up sur 1+ cibles. Combo : E → Q3 → R → W → Q → E retour. Passif : 1 AA sur 2 = magique, crit doublé.',
+b:'Berserker → Immortal Shieldbow / Kraken → Infinity Edge → Bloodthirster / Death\'s Dance · Berserker · Tempo Létal ou Conquérant',
+p:'Lvl 1–3 : trade E → W → Q3, revient sur E retour. Post-6 : R sur 2 alignés = fight gagné. 2 objets = tu gagnes les 1v1. Mid game : side lane, E pour dive sous tour et sortir.',
+m:[['Malzahar','Silence + R : ne push pas post-6, QSS.'],['Renekton','Il te bat lvl 1–5 : farm, E court, trade quand son E est en CD.'],['Pantheon','Il bloque tes Q avec E : trade quand son E est en CD.']],
+k:['E retour = tu reviens au point de départ : lance E depuis la sécurité.','R traverse : pénètre pour toucher le carry derrière.'],
+v:'Bon contre les mages et les carries · Difficile contre les tanks CC et les mêlées early'},
+
+Yorick:{r:['TOP','JUNGLE'],t:'Juggernaut invocateur',s:['Niveau 6','1er objet','2 objets'],
+c:'E (brume : slow, marque, les goules sautent dessus) → Q (AA renforcée, soins, crée des tombes) → W (mur, cage). R : la Demoiselle (push seule) + goules. Combo : E → Q → W → R. Split : R + goules sur une side lane.',
+b:'Trinity Force / Sundered Sky → Hullbreaker → Sterak / Death\'s Dance · Bottes plaquées · Conquérant ou Grasp',
+p:'Lvl 1–5 : farm, 3 tombes = 3 goules : trade E → goules → Q. W cage sur l\'ennemi qui fuit. Post-6 : R sur la side lane = push permanent, tu forces 2 ennemis. TP pour les objectifs.',
+m:[['Vayne','Kite : joue le map.'],['Fiora','Elle t\'exécute : farm, joue R split.'],['Malphite','Tank : split push, joue le map.']],
+k:['W cage bloque les dashes courts et tient l\'ennemi 4 s.','R sur une lane loin = un 2e joueur qui push.'],
+v:'Bon contre les mêlées lents · Difficile contre le kite et l\'AoE'},
+
+Yuumi:{r:['SUPPORT'],t:'Enchanteresse attachée',s:['Niveau 3','1er objet','2 objets'],
+c:'W (attache-toi à un allié : tu ne peux pas être ciblée) → Q (missile : slow, contrôlé si attachée) → E (soins + vitesse, meilleur sur ton « meilleur ami »). R : vagues qui rootent (3 coups) + soins. Combo : Q → E → R.',
+b:'Objet support → Moonstone / Ardent Censer → Redemption / Shurelya · aucune boot nécessaire · Aery ou Guardian',
+p:'Lvl 1 : reste détachée pour les AA (or de l\'objet support), attache-toi dès que l\'ennemi engage. Q poke via ton ADC. Post-6 : R quand ton ADC est en danger ou quand 2+ ennemis sont en ligne. Choisis ton « meilleur ami » (souvent le hyper-carry).',
+m:[['Leona','Elle stun ton ADC : reste attachée, E pour soigner, Q slow sur elle.'],['Pyke','Il ne peut pas te grab si attachée : reste attachée.'],['Blitzcrank','Idem : attachée, E après le grab.']],
+k:['Attachée, seuls les AoE et les tours te touchent.','Q contrôlé (attachée) = tu diriges le missile avec la souris.'],
+v:'Bonne avec un hyper-carry · Difficile contre le poke sur ton ADC'},
+
+Yunara:{r:['ADC'],t:'ADC AS / magique',s:['2 objets','Niveau 6','3 objets'],
+c:'Q (stacks via AA → activation : AS + dégâts magiques qui se propagent) → AA AA → W (perle : slow + dégâts, s\'étend à portée max) → E (vitesse, ghosting). R : transcendance 15 s : Q auto, W = Arc de ruine, E = dash. Combo : W → Q → AA spam → R quand le fight commence.',
+b:'Kraken / Guinsoo → Infinity Edge / Nashor\'s Tooth → Wit\'s End / Rabadon (hybride) · Berserker · Tempo Létal ou Précision',
+p:'Lvl 1–5 : farm, W poke sur l\'ennemi qui approche, active Q pour les trades. Tu scales : ne meurs pas. Post-6 : R = 15 s de DPS maximal, lance-le au début du fight. Late : reste derrière ton frontline, AA spam.',
+m:[['Draven','Il te tue early : farm, W slow, recule.'],['Caitlyn','Portée : W sur ses pièges, farm.'],['Lucian','All-in lvl 2 : E de fuite, W slow.']],
+k:['W à portée max s\'élargit : poke de loin.','R transforme E en dash : garde-le pour esquiver un engage.'],
+v:'Bonne contre les compos qui laissent scale · Difficile contre les lanes agressives'},
+
+Zaahen:{r:['TOP','JUNGLE'],t:'Skirmisher darkin',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (2 coups renforcés : soins, recast = knock-up) → W (glaive tendu : dégâts, à portée max = stun + attire) → E (dash + frappe de zone : bord = plus de dégâts). R : immunité CC, saut puis frappe retardée + soins. Passif : stacks de détermination = AD ; au max, résurrection brève sur coup mortel.',
+b:'À vérifier sur u.gg selon le patch : Sundered Sky / Eclipse → Black Cleaver → Sterak / Death\'s Dance · Bottes plaquées · Conquérant',
+p:'Lvl 1–5 : trade Q Q (soins) → E bord, W pour ramener l\'ennemi qui fuit. Stack la détermination sur chaque trade. Post-6 : R engage à travers le CC, passif = ta 2e vie : all-in à max stacks. Jungle : Q sur les monstres (dégâts bonus), gank W → E.',
+m:[['Fiora','Elle pare Q2 : trade Q1 → E, garde W pour la ramener.'],['Vayne','Kite : W pour l\'attirer, ne la chasse pas sans R.'],['Malphite','Tank : farm, joue le map.']],
+k:['W à portée max = stun + attire : lance-le sur le fuyard, pas au contact.','Passif max = tu ressuscites : engage quand la barre est pleine.'],
+v:'Bon contre les mêlées et les bruisers · Difficile contre le kite et l\'anti-soin'},
+
+Zac:{r:['JUNGLE','TOP'],t:'Tank engage élastique',s:['Niveau 6','1er objet','2 objets'],
+c:'E (chargé : saut long, knock-up) → Q (attrape 2 cibles et les cogne) → W (explosion, % PV) → R (bonds : knock-up, lance la cible). Combo : E depuis un mur → Q → W → R. Passif : ramasse les morceaux (soins), résurrection.',
+b:'Sunfire / Heartsteel → Thornmail / Jak\'Sho → Spirit Visage / Kaenic · Mercury / plaquées · Aftershock ou Conquérant',
+p:'Full clear (W AoE, ramasse les morceaux), gank lvl 4 : E chargé derrière un mur = knock-up de nulle part. Post-6 : E → Q → R sur le backline. Objectifs : tu tank tout. Late : engage sur 3 = fight gagné.',
+m:[['Lillia','Elle te kite : gank tôt.'],['Nunu','Il te vole : commence côté opposé.'],['Kindred','Kite : engage avec E.']],
+k:['E charge complète = 1 800 unités par-dessus les murs.','Passif : les ennemis peuvent tuer tes morceaux — ramasse-les avant.'],
+v:'Bon contre les compos groupées · Difficile contre le % PV et le kite'},
+
+Zed:{r:['MID','JUNGLE'],t:'Assassin ombres',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (ombre : recast = tu te téléportes) → Q (shurikens : chaque ombre lance aussi) → E (slow depuis chaque ombre). R : marque la cible, ombre derrière, explosion après 3 s (dégâts selon ce que tu as fait). Combo : R → W → E → Q → AA → R retour. Passif : bonus sur cible basse.',
+b:'Youmuu / Eclipse → Edge of Night / Opportunity → Serylda / Black Cleaver · Ionian / plaquées · Électrocution ou First Strike',
+p:'Lvl 1–5 : poke W → Q (double shuriken), W retour. Lvl 3 : W E Q trade puis retour. Post-6 : R sur les squishies bas = kill. Roam. Mid game : side lane, R sur les carries isolés, ombres = escape.',
+m:[['Malzahar','Bouclier + R : QSS obligatoire, casse le bouclier au Q.'],['Lissandra','Elle te CC sous R : R après son W.'],['Kayle','Elle scale et R : tue-la pré-11, R quand son R est en CD.']],
+k:['Ombre W placée avant le trade = 2 lignes de Q.','R retour (recast) te ramène à l\'ombre : garde-la hors de portée.'],
+v:'Bon contre les mages immobiles et les carries · Difficile contre les tanks CC et Zhonya'},
+
+Zeri:{r:['ADC'],t:'ADC mobile AS',s:['2 objets','3 objets','Late game'],
+c:'Q (ton AA : tir en ligne, on-hit) → W (laser : traverse les murs) → E (dash + murs, Q renforcé) → R (AS + vitesse, stacks sur AA). AA (chargé = bouclier volé). Combo : E → Q spam → R → Q Q Q. Kite : Q en bougeant.',
+b:'Kraken / Statikk → Runaan → Infinity Edge / Lord Dominik · Berserker · Précision (PTA) ou Fleet',
+p:'Lane : farm au Q (ligne, touche plusieurs sbires), trade court. Tu es faible : 2 objets. Post-11 : R + Q spam = DPS max, E par-dessus les murs pour fuir ou entrer. Late : la vitesse te rend intouchable.',
+m:[['Draven','Il te tue early : farm, E de fuite.'],['Caitlyn','Portée : évite les pièges, Q via sbires.'],['Lucian','All-in lvl 2 : E par-dessus le mur.']],
+k:['E traverse tous les murs : escape gratuit.','R stacks sur chaque AA champion : reste dans le fight.'],
+v:'Bonne contre les compos lentes · Difficile contre les assassins et les CC'},
+
+Ziggs:{r:['MID','ADC'],t:'Mage siège / poke',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (bombe rebondit : vise le 3e rebond) → W (satchel : knock-back / saut, exécute les tours bas) → E (mines : slow). R : bombe globale-ish (AoE). Combo : E → W → Q → R. Poke : Q à portée max, sans risque.',
+b:'Luden\'s Echo → Shadowflame / Liandry → Rabadon · Bottes du sorcier / Ionian · Comète ou Aery',
+p:'Lane : poke Q, farm au Q. Push et prends les plaques (W exécute les tours sous 25 %). Post-6 : R sur les fights bot ou la wave loin. Mid game : siège : E sur les chemins, Q sur les groupes.',
+m:[['Zed','Zhonya. W pour te projeter loin quand il R.'],['Fizz','Il esquive : W saut quand il arrive.'],['Talon','Il roam : ward, W de fuite.']],
+k:['W sur une tour sous 25 % = tu la détruis.','W sur toi = saut par-dessus un mur.'],
+v:'Bon contre les mêlées lents et les compos qui siègent mal · Difficile contre les assassins'},
+
+Zilean:{r:['SUPPORT','MID'],t:'Support utilitaire / temps',s:['Niveau 6','1er objet','2 objets'],
+c:'Q (bombe : 2 sur la même cible = stun) → W (reset les CD de Q / E) → E (vitesse allié / slow ennemi). R : ressuscite un allié. Combo : Q → W → Q = stun. Passif : XP aux alliés.',
+b:'Objet support → Shurelya / Moonstone → Redemption / Zhonya · Ionian / Mobility · Aery ou Glacial',
+p:'Lane : Q W Q stun sur l\'ennemi qui engage. E vitesse sur l\'ADC. Mid game : R sur le carry avant qu\'il meure (regarde la barre), E sur l\'engage adverse (slow). Passif : donne des niveaux à ton carry.',
+m:[['Leona','Q W Q sur elle quand elle E.'],['Blitzcrank','Reste derrière les sbires ; si l\'ADC est grab, E vitesse sur lui et Q W Q sur Blitzcrank.'],['Pyke','Q W Q quand il E.']],
+k:['Q W Q = stun 1,5 s : entraîne le double bombe.','R sur l\'allié à 20 % PV, pas à 5 % : la mort arrive vite.'],
+v:'Bon avec un hyper-carry · Difficile contre le poke'},
+
+Zoe:{r:['MID','SUPPORT'],t:'Mage burst / sommeil',s:['Niveau 3','Niveau 6','1er objet'],
+c:'E (bulle : endort après 2 s, plus loin à travers un mur) → Q (étoile : plus de dégâts si lancée loin, recast pour rediriger) → AA (passif). W : ramasse les sorts d\'invocateur droppés. R : saute d\'un côté puis retour. Combo : E → R (vers l\'ennemi) → Q longue → AA.',
+b:'Luden\'s Echo → Shadowflame → Rabadon / Zhonya · Bottes du sorcier · Électrocution ou Aery',
+p:'Lane : poke Q longue portée (lance derrière toi puis redirige), E sur l\'ennemi qui recall / avance. Post-6 : E à travers un mur = kill. W ramasse les objets des sbires (bonus). Support : E sur l\'engage.',
+m:[['Fizz','Il esquive : E après son saut.'],['Yasuo','Mur bloque E et Q : E quand W est en CD.'],['Kassadin','Il scale : tue-le tôt, E quand il R.']],
+k:['E à travers un mur = portée doublée : lance-le derrière le terrain.','Q lancée loin = dégâts max : lance en arrière puis redirige.'],
+v:'Bonne contre les mages immobiles · Difficile contre les dashers'},
+
+Zyra:{r:['SUPPORT','MID'],t:'Mage plantes / poke',s:['Niveau 3','Niveau 6','1er objet'],
+c:'W (graines) → Q (zone : les graines deviennent des plantes tirantes) / E (root en ligne : les graines deviennent des plantes attrapantes). R : zone qui knock-up après 2 s. Combo : E → W → Q → R. Passif : graines spontanées.',
+b:'Liandry → Rylai / Blackfire Torch → Rabadon / Zhonya · Bottes du sorcier / Ionian · Comète ou Aery',
+p:'Support : poke W + Q depuis le bush, E root sur l\'ennemi qui avance. Plantes = vision + dégâts. Mid game : E → R sur 2+ en fight, Zhonya pendant R. Tu es fragile : reste derrière.',
+m:[['Leona','E root quand elle E.'],['Blitzcrank','Reste derrière, plantes entre vous.'],['Nautilus','Idem : E quand il Q.']],
+k:['Plantes dans un bush = vision + dégâts sur le recall ennemi.','R knock-up après 2 s : lance-le sur une cible rootée.'],
+v:'Bonne contre les lanes lentes · Difficile contre les assassins et les dives'},
+});
+
+/* ============================================================
    CLIMB — application (core)
    ============================================================ */
 const $ = (s, r=document) => r.querySelector(s);
@@ -1957,13 +3358,16 @@ function renderDeathRows(){
 }
 function renderFicheReminder(){
   const el = $('#ficheReminder'); if (!el) return;
-  const f = form.champ && S.fiches && S.fiches[form.champ];
-  if (!f || !(f.combos || f.plan || (f.matchups||[]).length || (f.spikes||[]).length)){ el.innerHTML = ''; return; }
-  el.innerHTML = `<details style="margin-top:8px"><summary><span>Fiche ${esc(champName(form.champ))} — rappel avant la game</span></summary><div class="body">
-    ${f.spikes && f.spikes.length ? `<p><b>Spikes :</b> ${f.spikes.map(esc).join(', ')}</p>` : ''}
-    ${f.combos ? `<p><b>Combos :</b> ${esc(f.combos)}</p>` : ''}
-    ${f.plan ? `<p><b>Plan de lane :</b> ${esc(f.plan)}</p>` : ''}
-    ${(f.matchups||[]).length ? `<p><b>Matchups :</b></p><ul class="clean small">${f.matchups.map(m => `<li><b>${esc(champName(m.champ))}</b> — ${esc(m.plan || 'pas de plan noté')}</li>`).join('')}</ul>` : ''}
+  const id = form.champ; const D = id && FICHES_DEFAULT[id]; const f = id && S.fiches && S.fiches[id];
+  if (!D && !f){ el.innerHTML = ''; return; }
+  const mus = []; if (f) f.matchups.forEach(m => { if (m.plan) mus.push([m.champ, m.plan, 'moi']); }); if (D) D.m.forEach(m => { if (!mus.find(x => x[0] === m[0])) mus.push([m[0], m[1], 'coach']); });
+  el.innerHTML = `<details style="margin-top:8px"><summary><span>Fiche ${esc(champName(id))} — rappel avant la game</span></summary><div class="body">
+    ${D ? `<p><b>Spikes :</b> ${D.s.map(esc).join(', ')}${f && f.spikes.length ? ` · <i>moi :</i> ${f.spikes.map(esc).join(', ')}` : ''}</p>` : ''}
+    ${D ? `<p><b>Combos :</b> ${esc(D.c)}</p>` : ''}${f && f.combos ? `<p><b>Mes rappels :</b> ${esc(f.combos)}</p>` : ''}
+    ${D ? `<p><b>Build :</b> ${esc(D.b)}</p>` : ''}${f && f.build ? `<p><b>Mon build :</b> ${esc(f.build)}</p>` : ''}
+    ${D ? `<p><b>Plan :</b> ${esc(D.p)}</p>` : ''}${f && f.plan ? `<p><b>Mon plan :</b> ${esc(f.plan)}</p>` : ''}
+    ${mus.length ? `<p><b>Matchups :</b></p><ul class="clean small">${mus.map(m => `<li><b>${esc(champName(m[0]))}</b> — ${esc(m[1])} <span class="tiny muted">(${m[2]})</span></li>`).join('')}</ul>` : ''}
+    ${D ? `<p class="tiny muted">${esc(D.v)}</p>` : ''}
   </div></details>`;
 }
 function renderRecentChamps(){
@@ -2454,29 +3858,59 @@ function attachPicker(input, list, onPick, limit=6){
 /* fiches champion */
 let ficheSel = null;
 function ficheChamps(){ const ids = []; ROLES.forEach(r => (S.pool[r.id]||[]).forEach(p => ids.push(p.champ))); Object.keys(S.fiches || {}).forEach(id => { const f = S.fiches[id]; if (f && (f.combos || f.plan || f.build || (f.spikes||[]).length || (f.matchups||[]).length)) ids.push(id); }); gamesSorted().slice(-10).forEach(g => ids.push(g.champ)); return [...new Set(ids)]; }
+let ficheRole = null;
+function coachSheetHTML(id, D){
+  const roleFr = r => (ROLES.find(x => x.id === r)||{}).fr || r;
+  return `<div class="card tight" style="background:var(--surface-2);margin-top:12px">
+    <div class="card-title"><h3>Fiche du coach</h3><span class="badge gold">${esc(D.t)}</span></div>
+    <div class="chips" style="margin-bottom:8px">${D.r.map(r => `<span class="chip on" style="cursor:default">${esc(roleFr(r))}</span>`).join('')}${D.s.map(sp => `<span class="chip teal on" style="cursor:default">${esc(sp)}</span>`).join('')}</div>
+    <div class="grid grid-2">
+      <div>
+        <h4 style="color:var(--gold)">Combos &amp; trades</h4><p class="small">${esc(D.c)}</p>
+        <h4 style="color:var(--gold);margin-top:10px">Build &amp; runes</h4><p class="small">${esc(D.b)}</p>
+        <p class="tiny muted">Les builds bougent à chaque patch : confirme l'ordre des objets sur u.gg / Lolalytics (liens ci-dessus).</p>
+      </div>
+      <div>
+        <h4 style="color:var(--teal)">Plan de lane / de jungle</h4><p class="small">${esc(D.p)}</p>
+        <h4 style="color:var(--loss);margin-top:10px">Matchups durs</h4>
+        <ul class="clean small" style="padding-left:0;list-style:none">${D.m.map(m => `<li style="display:flex;gap:8px;align-items:flex-start">${champIcon(m[0], 'sm')}<span><b>${esc(champName(m[0]))}</b> — ${esc(m[1])}</span></li>`).join('')}</ul>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <ul class="clean small">${D.k.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+    <p class="small muted" style="margin-top:6px">${esc(D.v)}</p>
+  </div>`;
+}
 function renderFiches(){
   attachPicker($('#ficheInput'), $('#ficheList'), id => { ficheSel = id; renderFiches(); });
   const quick = ficheChamps().slice(0, 12);
   $('#ficheQuick').innerHTML = quick.map(id => `<span class="rc" data-id="${id}" style="cursor:pointer;${ficheSel === id ? 'outline:2px solid var(--gold);border-radius:50%' : ''}">${champIcon(id)}</span>`).join('');
   $$('#ficheQuick .rc').forEach(x => x.onclick = () => { ficheSel = x.dataset.id; renderFiches(); });
+  $('#ficheRoleChips').innerHTML = `<span class="tiny muted" style="align-self:center">Parcourir :</span>` + ROLES.map(r => `<span class="chip ${ficheRole === r.id ? 'on' : ''}" data-v="${r.id}">${r.fr}</span>`).join('');
+  $$('#ficheRoleChips .chip').forEach(c => c.onclick = () => { ficheRole = ficheRole === c.dataset.v ? null : c.dataset.v; renderFiches(); });
+  const grid = $('#ficheRoleGrid');
+  if (ficheRole){ const list = CHAMPS.filter(c => (FICHES_DEFAULT[c[0]]||{r:[]}).r.includes(ficheRole)); grid.innerHTML = list.map(c => `<span class="rc" data-id="${c[0]}" style="cursor:pointer;${ficheSel === c[0] ? 'outline:2px solid var(--gold);border-radius:50%' : ''}" title="${esc(c[1])}">${champIcon(c[0])}</span>`).join(''); $$('.rc', grid).forEach(x => x.onclick = () => { ficheSel = x.dataset.id; renderFiches(); $('#ficheBody').scrollIntoView({behavior:'smooth', block:'start'}); }); }
+  else grid.innerHTML = '';
   const body = $('#ficheBody');
-  if (!ficheSel){ body.innerHTML = `<div class="empty"><b>Choisis un champion</b>Ton pool et tes derniers champions sont juste au-dessus. Une fiche = ce que tu relis pendant le chargement.</div>`; return; }
-  const f = fiche(ficheSel), L = champLinks(ficheSel);
+  if (!ficheSel){ body.innerHTML = `<div class="empty"><b>Choisis un champion</b>Les 173 champions ont une fiche rédigée par le coach (combos, spikes, build, plan, matchups). Tes propres notes s'ajoutent dessous.</div>`; return; }
+  const f = fiche(ficheSel), L = champLinks(ficheSel), D = FICHES_DEFAULT[ficheSel];
   body.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">${champIcon(ficheSel, 'xl')}<div><h3 style="font-size:1.3rem">${esc(champName(ficheSel))}</h3>
       <div class="btn-row" style="margin-top:6px"><a class="btn xs" target="_blank" rel="noopener" href="${L.ugg}">Build u.gg</a><a class="btn xs" target="_blank" rel="noopener" href="${L.lola}">Lolalytics</a><a class="btn xs" target="_blank" rel="noopener" href="${L.opgg}">OP.GG</a><a class="btn xs" target="_blank" rel="noopener" href="${L.uggMu}">Matchups u.gg</a></div></div></div>
-    <label class="field" style="margin-top:12px">Power spikes</label>
+    ${D ? coachSheetHTML(ficheSel, D) : ''}
+    <div class="card-title" style="margin-top:14px"><h3>Mes notes</h3><span class="tiny muted">ce que tu ajoutes à la fiche du coach</span></div>
+    <label class="field">Power spikes (les miens)</label>
     <div class="chips" id="ficheSpikes">${SPIKES.map(sp => `<span class="chip ${f.spikes.includes(sp) ? 'on' : ''}" data-v="${esc(sp)}">${esc(sp)}</span>`).join('')}</div>
     <div class="grid grid-2" style="margin-top:10px">
-      <div><label class="field">Combos (dans l'ordre)</label><textarea class="input" id="ficheCombos" placeholder="Ex : E → Q → AA → W → R. Trade court : Q + AA puis recule.">${esc(f.combos)}</textarea></div>
-      <div><label class="field">Build de base &amp; runes</label><textarea class="input" id="ficheBuild" placeholder="Ex : Eclipse → Bottes → Black Cleaver. Conquérant + Triomphe…">${esc(f.build)}</textarea></div>
+      <div><label class="field">Combos (mes rappels)</label><textarea class="input" id="ficheCombos" placeholder="Ex : ce que je rate souvent, l'ordre qui marche pour moi…">${esc(f.combos)}</textarea></div>
+      <div><label class="field">Build &amp; runes (ma version du patch)</label><textarea class="input" id="ficheBuild" placeholder="Ex : l'ordre exact vu sur u.gg ce patch">${esc(f.build)}</textarea></div>
     </div>
-    <label class="field" style="margin-top:10px">Plan de lane par défaut</label>
+    <label class="field" style="margin-top:10px">Mon plan de lane</label>
     <textarea class="input" id="fichePlan" placeholder="Ex : lvl 1 safe, lvl 2 trade court, push lvl 3 pour la ward, recall à 4:30 avec 900 g.">${esc(f.plan)}</textarea>
-    <label class="field" style="margin-top:10px">Matchups durs (3 max, avec le plan)</label>
+    <label class="field" style="margin-top:10px">Mes matchups (3 max, avec le plan)</label>
     <div id="ficheMatchups" class="grid" style="gap:8px">${f.matchups.map((m, i) => `<div class="insight" style="align-items:center"><div>${champIcon(m.champ)}</div><div style="flex:1;min-width:0"><b>${esc(champName(m.champ))}</b><textarea class="input mu-plan" data-i="${i}" placeholder="Le plan : qui gagne lvl 1/2/6, comment trade, quand recall…" style="margin-top:4px;min-height:48px">${esc(m.plan||'')}</textarea></div><button class="btn xs ghost mu-rm" data-i="${i}">✕</button></div>`).join('')}</div>
     ${f.matchups.length < 3 ? `<div class="champ-pick" style="margin-top:8px"><input class="input" id="muAdd" placeholder="+ ajouter un matchup" autocomplete="off"><div class="champ-list hidden" id="muAddList"></div></div>` : ''}
-    <p class="tiny muted" style="margin-top:8px">Tout est sauvegardé automatiquement. La fiche s'affiche en rappel quand tu sélectionnes ce champion dans une session.</p>`;
+    <p class="tiny muted" style="margin-top:8px">Tout est sauvegardé automatiquement. La fiche (coach + tes notes) s'affiche en rappel quand tu sélectionnes ce champion dans une session.</p>`;
   $$('#ficheSpikes .chip').forEach(c => c.onclick = () => { const v = c.dataset.v; f.spikes = f.spikes.includes(v) ? f.spikes.filter(x => x !== v) : [...f.spikes, v]; save(); c.classList.toggle('on', f.spikes.includes(v)); });
   $('#ficheCombos').onchange = () => { f.combos = $('#ficheCombos').value.trim(); save(); };
   $('#ficheBuild').onchange = () => { f.build = $('#ficheBuild').value.trim(); save(); };
@@ -2512,9 +3946,10 @@ function renderDraft(){
 }
 function renderMatchupResult(){
   const el = $('#muResult'); if (!draft.mine || !draft.enemyChamp){ el.innerHTML = '<p class="tiny muted">Choisis ton champion et celui d\'en face : le plan noté dans ta fiche apparaît ici.</p>'; return; }
-  const f = (S.fiches || {})[draft.mine]; const m = f && f.matchups.find(x => x.champ === draft.enemyChamp); const L = champLinks(draft.mine);
-  el.innerHTML = `<div class="insight ${m ? 'good' : 'warn'}"><div class="ico">${svgUse(m ? 'i-check' : 'i-warn')}</div><div><b>${esc(champName(draft.mine))} vs ${esc(champName(draft.enemyChamp))}</b><p>${m ? (esc(m.plan) || 'Matchup noté, mais sans plan : ajoute-le dans la fiche.') : 'Pas de note dans ta fiche. Regarde les chiffres, puis note un plan en 2 lignes.'}</p>
-    <div class="btn-row" style="margin-top:6px"><a class="btn xs" target="_blank" rel="noopener" href="${L.lolaVs(draft.enemyChamp)}">Lolalytics vs</a><a class="btn xs" target="_blank" rel="noopener" href="${L.uggMu}">Matchups u.gg</a>${!m ? `<button class="btn xs teal" id="muAddFromDraft">Noter ce matchup</button>` : ''}</div></div></div>`;
+  const f = (S.fiches || {})[draft.mine]; const mine = f && f.matchups.find(x => x.champ === draft.enemyChamp && x.plan); const D = FICHES_DEFAULT[draft.mine]; const coach = D && D.m.find(x => x[0] === draft.enemyChamp); const L = champLinks(draft.mine);
+  const m = mine ? { plan: mine.plan, src: 'ta note' } : coach ? { plan: coach[1], src: 'fiche du coach' } : null;
+  el.innerHTML = `<div class="insight ${m ? 'good' : 'warn'}"><div class="ico">${svgUse(m ? 'i-check' : 'i-warn')}</div><div><b>${esc(champName(draft.mine))} vs ${esc(champName(draft.enemyChamp))}</b>${m ? `<span class="badge ${mine ? 'teal' : 'gold'}" style="margin-left:6px">${m.src}</span>` : ''}<p>${m ? esc(m.plan) : 'Pas de matchup noté pour celui-là. Regarde les chiffres, puis note un plan en 2 lignes.'}</p>${D ? `<p class="tiny muted">${esc(D.v)}</p>` : ''}
+    <div class="btn-row" style="margin-top:6px"><a class="btn xs" target="_blank" rel="noopener" href="${L.lolaVs(draft.enemyChamp)}">Lolalytics vs</a><a class="btn xs" target="_blank" rel="noopener" href="${L.uggMu}">Matchups u.gg</a>${!mine ? `<button class="btn xs teal" id="muAddFromDraft">Noter ce matchup</button>` : ''}</div></div></div>`;
   const b = $('#muAddFromDraft'); if (b) b.onclick = () => { const ff = fiche(draft.mine); if (ff.matchups.length >= 3){ toast('3 matchups max par fiche'); return; } ff.matchups.push({ champ:draft.enemyChamp, plan:'' }); save(); ficheSel = draft.mine; renderFiches(); $('#ficheBody').scrollIntoView({behavior:'smooth'}); toast('Matchup ajouté à la fiche : écris le plan.'); };
 }
 function renderCompResult(){
